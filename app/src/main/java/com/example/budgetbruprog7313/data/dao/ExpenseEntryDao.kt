@@ -8,7 +8,7 @@ import java.util.Date
 @Dao
 interface ExpenseEntryDao {
     @Insert
-    suspend fun insertEntry(entry: ExpenseEntry)
+    suspend fun insertEntry(entry: ExpenseEntry): Long
 
     @Query("""
         SELECT * FROM expense_entries 

@@ -30,6 +30,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+
     buildFeatures {
         compose = true
     }
@@ -50,7 +54,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
 
     // Room
-    val room_version = "2.5.2"
+    val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     kapt("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
@@ -67,4 +71,9 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.2.2")
     implementation("androidx.camera:camera-lifecycle:1.2.2")
     implementation("androidx.camera:camera-view:1.2.2")
+}
+
+kapt {
+    correctErrorTypes = true
+    useBuildCache = false
 }

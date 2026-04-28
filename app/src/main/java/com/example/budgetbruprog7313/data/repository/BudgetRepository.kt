@@ -1,10 +1,12 @@
 package com.example.budgetbruprog7313.data.repository
 
 import com.example.budgetbruprog7313.data.dao.ExpenseEntryDao
+import com.example.budgetbruprog7313.data.dao.SettingsDao
 import com.example.budgetbruprog7313.data.database.AppDatabase
 import com.example.budgetbruprog7313.data.model.Category
 import com.example.budgetbruprog7313.data.model.ExpenseEntry
 import com.example.budgetbruprog7313.data.model.User
+import com.example.budgetbruprog7313.data.model.Settings
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
 
@@ -13,6 +15,7 @@ class BudgetRepository(private val db: AppDatabase) {
     private val userDao = db.userDao()
     private val categoryDao = db.categoryDao()
     private val entryDao = db.expenseEntryDao()
+    private val settingsDao = db.settingsDao()
 
     // Login
     suspend fun login(username: String, password: String): User? =
@@ -53,4 +56,10 @@ class BudgetRepository(private val db: AppDatabase) {
             )
         )
     }
+
+    suspend fun saveGoals(min: Double, max: Double) {
+        settingsDao.saveSettings(Settings(minMonthlyGoal = min, maxMonthlyGoal = max))
+    }
+
+    fun getGoals(): Flow<Settings?> = settingsDao.getSettings()
 }

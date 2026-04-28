@@ -22,6 +22,7 @@
 
         <activity android:name=".ui.AddExpenseActivity" />
         <activity android:name=".ui.ExpenseListActivity" />
+        <activity android:name=".ui.PeriodReportActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
