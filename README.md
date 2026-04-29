@@ -10,7 +10,7 @@
 
 **A modern, feature-rich budget tracking app designed specifically for students to manage expenses, set financial goals, and track money owed to friends.**
 
-[Features](#features) • [Screenshots](#screenshots) • [Tech Stack](#tech-stack) • [Installation](#installation) • [Usage](#usage) • [Demo Credentials](#demo-credentials)
+[Features](#features) • [Tech Stack](#tech-stack) • [Installation](#installation) • [Usage](#usage) • [Demo Credentials](#demo-credentials)
 
 </div>
 
