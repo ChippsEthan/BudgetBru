@@ -39,7 +39,7 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 - Delete unwanted categories
 - Pre-loaded default categories (Food, Transport, Groceries, etc.)
 
-### 💸 Expense Tracking
+### Expense Tracking
 - Add expenses with description, amount, and category
 - Track start and end times for activities
 - **Optional photo attachment** for receipts
