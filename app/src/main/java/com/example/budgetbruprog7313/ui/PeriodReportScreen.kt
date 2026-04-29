@@ -1,19 +1,16 @@
 package com.example.budgetbruprog7313.ui
 
-import androidx.compose.foundation.Image
-import coil.compose.rememberAsyncImagePainter
 import android.app.DatePickerDialog
-import android.widget.DatePicker
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Receipt
@@ -26,14 +23,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import coil.compose.rememberAsyncImagePainter
 import com.example.budgetbruprog7313.data.dao.ExpenseEntryDao
 import com.example.budgetbruprog7313.data.model.ExpenseEntry
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
@@ -52,8 +45,6 @@ fun PeriodReportScreen() {
     }
     val scope = rememberCoroutineScope()
 
-    // Use Calendar for date selection
-    val calendar = Calendar.getInstance()
     var startDate by remember { mutableStateOf<Date?>(null) }
     var endDate by remember { mutableStateOf<Date?>(null) }
     var entries by remember { mutableStateOf<List<ExpenseEntry>>(emptyList()) }
@@ -62,8 +53,9 @@ fun PeriodReportScreen() {
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    val displayDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
+    val displayDateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+    val calendar = Calendar.getInstance()
 
     fun loadData() {
         if (startDate != null && endDate != null) {
@@ -73,10 +65,8 @@ fun PeriodReportScreen() {
                 try {
                     val entryList = repository.getEntriesBetweenDates(startDate!!, endDate!!).first()
                     entries = entryList
-
                     val totalsList = repository.getCategorySpending(startDate!!, endDate!!).first()
                     categoryTotals = totalsList
-
                     isLoading = false
                 } catch (e: Exception) {
                     errorMessage = "Error loading data: ${e.message}"
@@ -86,7 +76,6 @@ fun PeriodReportScreen() {
         }
     }
 
-    // Set default dates (current month)
     LaunchedEffect(Unit) {
         val cal = Calendar.getInstance()
         val start = cal.apply {
@@ -107,195 +96,132 @@ fun PeriodReportScreen() {
         endDate = end
     }
 
-    // Load data when dates change
     LaunchedEffect(startDate, endDate) {
-        if (startDate != null && endDate != null) {
-            loadData()
-        }
+        if (startDate != null && endDate != null) loadData()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBackground)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text("Expense Reports", style = MaterialTheme.typography.headlineSmall, color = BudgetBruPrimary)
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Start Date Button
-            Button(
-                onClick = {
-                    val datePicker = DatePickerDialog(
-                        context,
-                        { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
-                            val selectedDate = GregorianCalendar(year, month, dayOfMonth).time
-                            startDate = selectedDate
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    )
-                    datePicker.show()
-                },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkCard)
-            ) {
-                Text(
-                    startDate?.let { displayDateFormat.format(it) } ?: "Start Date",
-                    color = Color.White
-                )
-            }
-
-            // End Date Button
-            Button(
-                onClick = {
-                    val datePicker = DatePickerDialog(
-                        context,
-                        { _: DatePicker, year: Int, month: Int, dayOfMonth: Int ->
-                            val selectedDate = GregorianCalendar(year, month, dayOfMonth).time
-                            endDate = selectedDate
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    )
-                    datePicker.show()
-                },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkCard)
-            ) {
-                Text(
-                    endDate?.let { displayDateFormat.format(it) } ?: "End Date",
-                    color = Color.White
-                )
-            }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Expense Reports", fontWeight = FontWeight.Bold, color = BudgetBruPrimary) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+            )
         }
-
-        if (errorMessage != null) {
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(DarkBackground)
+                .padding(paddingValues)
+        ) {
+            // Date picker row
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = BudgetBruAccent.copy(alpha = 0.2f))
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard)
             ) {
-                Text(errorMessage!!, modifier = Modifier.padding(12.dp), color = BudgetBruAccent)
-            }
-        }
-
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = DarkCard,
-            contentColor = BudgetBruPrimary
-        ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text("Entries", color = if (selectedTab == 0) BudgetBruPrimary else Color.White) }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("Category Totals", color = if (selectedTab == 1) BudgetBruPrimary else Color.White) }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        when (selectedTab) {
-            0 -> {
-                if (isLoading) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth ->
+                                    startDate = GregorianCalendar(year, month, dayOfMonth).time
+                                },
+                                calendar.get(Calendar.YEAR),
+                                calendar.get(Calendar.MONTH),
+                                calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = BudgetBruSecondary)
+                    ) {
+                        Icon(Icons.Default.CalendarToday, contentDescription = "Start Date", Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(startDate?.let { displayDateFormat.format(it) } ?: "Start Date", fontSize = 12.sp)
                     }
-                } else if (entries.isEmpty()) {
-                    ReportEmptyStateCard(
-                        title = "No expenses found",
-                        message = "No expenses found for this period.\nAdd some expenses from the home screen!",
-                        icon = Icons.Default.Receipt
-                    )
-                } else {
-                    LazyColumn {
-                        items(entries) { expenseEntry ->
-                            ReportExpenseCard(expense = expenseEntry, dateFormat = dateFormat)
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
+                    Button(
+                        onClick = {
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth ->
+                                    endDate = GregorianCalendar(year, month, dayOfMonth).time
+                                },
+                                calendar.get(Calendar.YEAR),
+                                calendar.get(Calendar.MONTH),
+                                calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = BudgetBruSecondary)
+                    ) {
+                        Icon(Icons.Default.CalendarToday, contentDescription = "End Date", Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(endDate?.let { displayDateFormat.format(it) } ?: "End Date", fontSize = 12.sp)
                     }
                 }
             }
-            1 -> {
-                if (isLoading) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else if (categoryTotals.isEmpty()) {
-                    ReportEmptyStateCard(
-                        title = "No spending data",
-                        message = "No spending in this period",
-                        icon = Icons.Default.PieChart
-                    )
-                } else {
-                    val totalSpent = categoryTotals.sumOf { it.total }
 
-                    // Pie Chart Section
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = DarkCard)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                "Spending Distribution",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = BudgetBruPrimary
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
+            if (errorMessage != null) {
+                Card(Modifier.fillMaxWidth().padding(16.dp), colors = CardDefaults.cardColors(containerColor = BudgetBruAccent.copy(alpha = 0.2f))) {
+                    Text(errorMessage!!, Modifier.padding(12.dp), color = BudgetBruAccent)
+                }
+            }
 
-                            CategoryPieChart(categoryTotals = categoryTotals)
+            TabRow(selectedTabIndex = selectedTab, containerColor = DarkCard, contentColor = BudgetBruPrimary) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Entries") })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Category Totals") })
+            }
 
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Total Spent:",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    "R${String.format(Locale.getDefault(), "%.2f", totalSpent)}",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BudgetBruAccent
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        "Breakdown by Category",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = BudgetBruSecondary,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-
-                    LazyColumn(
+            when (selectedTab) {
+                0 -> {
+                    if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    else if (entries.isEmpty()) EmptyReportState("No expenses found", Icons.Default.Receipt)
+                    else LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(categoryTotals) { total ->
-                            CategoryTotalRow(total, totalSpent)
+                        items(entries) { entry ->
+                            ReportExpenseCard(expense = entry, dateFormat = dateFormat)
+                        }
+                    }
+                }
+                1 -> {
+                    if (isLoading) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    else if (categoryTotals.isEmpty()) EmptyReportState("No spending data", Icons.Default.PieChart)
+                    else {
+                        val totalSpent = categoryTotals.sumOf { it.total }
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            item {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = BudgetBruPrimary.copy(alpha = 0.2f)),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(16.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Total Spent:", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                        Text("R${String.format("%.2f", totalSpent)}", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = BudgetBruAccent)
+                                    }
+                                }
+                            }
+                            // Pie Chart
+                            item {
+                                CategoryPieChart(categoryTotals = categoryTotals, totalSpent = totalSpent)
+                            }
+                            items(categoryTotals) { total ->
+                                CategoryTotalRow(total = total, totalSpent = totalSpent)
+                            }
                         }
                     }
                 }
@@ -305,127 +231,72 @@ fun PeriodReportScreen() {
 }
 
 @Composable
-fun CategoryPieChart(categoryTotals: List<ExpenseEntryDao.CategorySpending>) {
-    val total = categoryTotals.sumOf { it.total }
-    if (total == 0.0) return
-
-    val pieColors = listOf(
-        BudgetBruPrimary,
-        BudgetBruSecondary,
-        BudgetBruAccent,
-        Color(0xFFF59E0B),
-        Color(0xFF10B981),
-        Color(0xFFEF4444),
-        Color(0xFF8B5CF6),
-        Color(0xFF06B6D4),
-        Color(0xFFF97316),
-        Color(0xFF84CC16)
+fun CategoryPieChart(categoryTotals: List<ExpenseEntryDao.CategorySpending>, totalSpent: Double) {
+    if (categoryTotals.isEmpty() || totalSpent == 0.0) return
+    val colors = listOf(
+        BudgetBruPrimary, BudgetBruSecondary, BudgetBruAccent,
+        Color(0xFFF59E0B), Color(0xFF10B981), Color(0xFFEF4444),
+        Color(0xFF8B5CF6), Color(0xFF06B6D4), Color(0xFFF97316)
     )
-
     var startAngle = -90f
-    val animatedProgress by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(1000, easing = FastOutSlowInEasing),
-        label = "pieChartProgress"
-    )
+    val animatedProgress by animateFloatAsState(targetValue = 1f, animationSpec = tween(800), label = "pie")
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+        colors = CardDefaults.cardColors(containerColor = DarkCard)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Canvas(
-                modifier = Modifier
-                    .size(220.dp)
-                    .align(Alignment.CenterHorizontally)
-            ) {
-                var currentStartAngle = startAngle
-                categoryTotals.forEachIndexed { index, category ->
-                    val sweepAngle = (category.total / total * 360).toFloat() * animatedProgress
+        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Spending Distribution", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
+            Spacer(Modifier.height(12.dp))
+            Canvas(modifier = Modifier.size(220.dp)) {
+                var currentStart = startAngle
+                categoryTotals.forEachIndexed { index, cat ->
+                    val sweep = (cat.total / totalSpent * 360).toFloat() * animatedProgress
                     val path = Path().apply {
                         moveTo(size.width / 2, size.height / 2)
-                        arcTo(
-                            rect = Rect(
-                                left = 0f,
-                                top = 0f,
-                                right = size.width,
-                                bottom = size.height
-                            ),
-                            startAngleDegrees = currentStartAngle,
-                            sweepAngleDegrees = sweepAngle,
-                            forceMoveTo = false
-                        )
+                        arcTo(Rect(0f, 0f, size.width, size.height), currentStart, sweep, false)
                         close()
                     }
-                    drawPath(
-                        path = path,
-                        color = pieColors[index % pieColors.size]
-                    )
-                    currentStartAngle += sweepAngle
+                    drawPath(path, colors[index % colors.size])
+                    currentStart += sweep
                 }
-
-                drawCircle(
-                    color = DarkCard,
-                    radius = size.width * 0.35f,
-                    center = Offset(size.width / 2, size.height / 2)
-                )
+                drawCircle(color = DarkCard, radius = size.width * 0.35f, center = Offset(size.width / 2, size.height / 2))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                categoryTotals.forEachIndexed { index, category ->
-                    val percentage = (category.total / total * 100).toInt()
+            Spacer(Modifier.height(16.dp))
+            // Legend
+            Column(modifier = Modifier.fillMaxWidth()) {
+                categoryTotals.forEachIndexed { idx, cat ->
+                    val percent = ((cat.total / totalSpent) * 100).toInt()
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(pieColors[index % pieColors.size])
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = category.name,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(12.dp).clip(RoundedCornerShape(2.dp)).background(colors[idx % colors.size]))
+                            Spacer(Modifier.width(8.dp))
+                            Text(cat.name, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "R${String.format(Locale.getDefault(), "%.2f", category.total)}",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = BudgetBruAccent
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "($percentage%)",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                        }
+                        Text("R${String.format("%.2f", cat.total)} ($percent%)", fontSize = 13.sp, color = BudgetBruAccent)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ReportExpenseCard(expense: ExpenseEntry, dateFormat: SimpleDateFormat) {
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(expense.description, fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text("R${String.format("%.2f", expense.amount)}", color = BudgetBruAccent, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("${dateFormat.format(expense.date)} • ${expense.startTime} - ${expense.endTime}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (!expense.photoPath.isNullOrEmpty()) {
+                Icon(Icons.Default.Image, contentDescription = "Photo", tint = BudgetBruPrimary, modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -433,173 +304,27 @@ fun CategoryPieChart(categoryTotals: List<ExpenseEntryDao.CategorySpending>) {
 
 @Composable
 fun CategoryTotalRow(total: ExpenseEntryDao.CategorySpending, totalSpent: Double) {
-    val percentage = if (totalSpent > 0) (total.total / totalSpent * 100).toInt() else 0
-    val animatedProgress by animateFloatAsState(
-        targetValue = percentage / 100f,
-        animationSpec = tween(800, easing = FastOutSlowInEasing),
-        label = "progressBar"
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    total.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
-                )
-                Text(
-                    text = "R${String.format(Locale.getDefault(), "%.2f", total.total)}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruAccent
-                )
+    val percent = if (totalSpent > 0) (total.total / totalSpent * 100).toInt() else 0
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(total.name, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                Text("R${String.format("%.2f", total.total)}", fontWeight = FontWeight.Bold, color = BudgetBruAccent)
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "$percentage% of total",
-                fontSize = 11.sp,
-                color = Color.White.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = animatedProgress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = when {
-                    percentage > 50 -> BudgetBruAccent
-                    percentage > 25 -> BudgetBruPrimary
-                    else -> BudgetBruSecondary
-                },
-                trackColor = Color.Gray.copy(alpha = 0.2f)
-            )
+            Spacer(Modifier.height(4.dp))
+            LinearProgressIndicator(progress = percent / 100f, modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = BudgetBruPrimary, trackColor = Color.Gray.copy(alpha = 0.2f))
+            Text("$percent% of total", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
         }
     }
 }
 
 @Composable
-fun ReportExpenseCard(expense: ExpenseEntry, dateFormat: SimpleDateFormat) {
-    var showPhotoDialog by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { if (expense.photoPath != null && expense.photoPath!!.isNotEmpty()) showPhotoDialog = true },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(expense.description, fontWeight = FontWeight.Medium)
-                Text(
-                    text = "${dateFormat.format(expense.date)} • ${expense.startTime} - ${expense.endTime}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (expense.photoPath != null && expense.photoPath!!.isNotEmpty()) {
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = "Has Photo",
-                        tint = BudgetBruPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(
-                    text = "R${String.format(Locale.getDefault(), "%.2f", expense.amount)}",
-                    color = BudgetBruAccent,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-        }
-    }
-
-    if (showPhotoDialog && expense.photoPath != null && expense.photoPath!!.isNotEmpty()) {
-        Dialog(onDismissRequest = { showPhotoDialog = false }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkCard)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Receipt Photo - ${expense.description}",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = BudgetBruPrimary)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Image(
-                        painter = rememberAsyncImagePainter(expense.photoPath),
-                        contentDescription = "Receipt",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Fit
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { showPhotoDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = BudgetBruPrimary)
-                    ) {
-                        Text("Close")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ReportEmptyStateCard(title: String, message: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = BudgetBruPrimary.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                message,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
+fun EmptyReportState(message: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = message, Modifier.size(64.dp), tint = BudgetBruPrimary.copy(alpha = 0.5f))
+            Spacer(Modifier.height(16.dp))
+            Text(message, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

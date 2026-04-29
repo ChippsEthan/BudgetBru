@@ -57,27 +57,8 @@ private fun MainAppContent(repository: BudgetRepository) {
     val sheetState = rememberModalBottomSheetState()
 
     Scaffold(
-        bottomBar = { InnovativeBottomBar(navController) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddExpenseBottomSheet = true },
-                containerColor = BudgetBruPrimary,
-                contentColor = Color.White,
-                modifier = Modifier.size(56.dp),
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 6.dp,
-                    pressedElevation = 12.dp
-                )
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Add Expense",
-                    modifier = Modifier.size(28.dp),
-                    tint = Color.White
-                )
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End
+        bottomBar = { InnovativeBottomBar(navController) }
+        // NO FLOATING ACTION BUTTON HERE - The FAB is now in HomeScreen only
     ) { innerPadding ->
 
         if (showAddExpenseBottomSheet) {

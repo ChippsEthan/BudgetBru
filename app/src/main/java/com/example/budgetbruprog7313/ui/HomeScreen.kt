@@ -19,8 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,25 +32,185 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.budgetbruprog7313.data.model.ExpenseEntry
+import com.example.budgetbruprog7313.data.model.Transaction
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+
+// ==================== INNOVATIVE FAB COMPONENT ====================
+
+@Composable
+fun InnovativeFAB(
+    onManualEntry: () -> Unit,
+    onScanReceipt: () -> Unit,
+    onAddIncome: () -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    val rotation by animateFloatAsState(
+        targetValue = if (isExpanded) 45f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "rotation"
+    )
+
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Box(
+        modifier = Modifier.padding(bottom = 16.dp),
+        contentAlignment = Alignment.BottomEnd
+    ) {
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(bottom = 80.dp)
+        ) {
+            FabSubItem(
+                label = "Scan Receipt",
+                icon = Icons.Default.Camera,
+                visible = isExpanded,
+                delay = 100,
+                onClick = {
+                    isExpanded = false
+                    onScanReceipt()
+                }
+            )
+            FabSubItem(
+                label = "Add Income",
+                icon = Icons.Default.AttachMoney,
+                visible = isExpanded,
+                delay = 50,
+                onClick = {
+                    isExpanded = false
+                    onAddIncome()
+                }
+            )
+            FabSubItem(
+                label = "Manual Entry",
+                icon = Icons.Default.EditNote,
+                visible = isExpanded,
+                delay = 0,
+                onClick = {
+                    isExpanded = false
+                    onManualEntry()
+                }
+            )
+        }
+
+        Box(contentAlignment = Alignment.Center) {
+            if (!isExpanded) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .scale(pulseScale)
+                        .clip(CircleShape)
+                        .background(BudgetBruPrimary.copy(alpha = 0.3f))
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .shadow(12.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(BudgetBruPrimary, BudgetBruSecondary)
+                        )
+                    )
+                    .clickable { isExpanded = !isExpanded },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = if (isExpanded) "Close" else "Add Expense",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .rotate(rotation)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FabSubItem(
+    label: String,
+    icon: ImageVector,
+    visible: Boolean,
+    delay: Int,
+    onClick: () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(200, delay)) + slideInVertically(initialOffsetY = { it / 2 }),
+        exit = fadeOut(tween(100)) + slideOutVertically(targetOffsetY = { it / 2 })
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(end = 4.dp)
+        ) {
+            Card(
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2E)),
+                elevation = CardDefaults.cardElevation(4.dp),
+                modifier = Modifier.padding(end = 12.dp)
+            ) {
+                Text(
+                    text = label,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(8.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color(0xFF2D2D44))
+                    .clickable { onClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = BudgetBruPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+// ==================== MAIN HOME SCREEN ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     repository: BudgetRepository,
-    onViewAllClick: () -> Unit = {}  // Navigation callback parameter
+    onViewAllClick: () -> Unit = {}
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(repository))
     val totalSpent by viewModel.totalSpent.collectAsState()
     val availableBalance by viewModel.availableBalance.collectAsState()
-    val recentExpenses by viewModel.recentExpenses.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val recentActivity by viewModel.recentActivity.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -54,6 +218,9 @@ fun HomeScreen(
     var selectedQuickAmount by remember { mutableStateOf(50.0) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var expenseToDelete by remember { mutableStateOf<ExpenseEntry?>(null) }
+    var showAddExpenseDialog by remember { mutableStateOf(false) }
+    var showAddIncomeDialog by remember { mutableStateOf(false) }
+    var showScanReceiptSnackbar by remember { mutableStateOf(false) }
 
     val dateFormatter = remember { SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()) }
     val currentDate = remember { dateFormatter.format(Date()) }
@@ -65,12 +232,19 @@ fun HomeScreen(
         }
     }
 
-    // Animated values
     val animatedBalance by animateFloatAsState(
         targetValue = availableBalance.toFloat(),
         animationSpec = tween(1000, easing = FastOutSlowInEasing),
         label = "balance"
     )
+
+    // Show snackbar for scan receipt
+    LaunchedEffect(showScanReceiptSnackbar) {
+        if (showScanReceiptSnackbar) {
+            snackbarHostState.showSnackbar("📷 Receipt scanning coming soon!")
+            showScanReceiptSnackbar = false
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -92,7 +266,7 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Settings will be added later */ }) {
+                    IconButton(onClick = { /* TODO: Settings */ }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 },
@@ -101,7 +275,15 @@ fun HomeScreen(
                     scrolledContainerColor = DarkBackground
                 )
             )
-        }
+        },
+        floatingActionButton = {
+            InnovativeFAB(
+                onManualEntry = { showAddExpenseDialog = true },
+                onScanReceipt = { showScanReceiptSnackbar = true },
+                onAddIncome = { showAddIncomeDialog = true }
+            )
+        },
+        floatingActionButtonPosition = FabPosition.End
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -195,7 +377,6 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Mini stats row inside balance card
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -287,7 +468,7 @@ fun HomeScreen(
                 }
             }
 
-            // Recent Activity Header with View All - FIXED: onViewAllClick is now used
+            // Recent Activity Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -298,33 +479,64 @@ fun HomeScreen(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
-                TextButton(
-                    onClick = onViewAllClick  // This now navigates to AllExpenses
-                ) {
+                TextButton(onClick = onViewAllClick) {
                     Text("View All", color = BudgetBruPrimary)
                 }
             }
 
-            // Recent Expenses List with Delete Functionality
+            // Recent Activity List (shows both expenses AND income)
             if (isLoading) {
                 repeat(3) {
                     ShimmerCard()
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-            } else if (recentExpenses.isEmpty()) {
-                EmptyStateCard(
-                    title = "No expenses yet",
-                    message = "Tap the + button to add your first expense",
-                    icon = Icons.Default.Receipt
-                )
+            } else if (recentActivity.isEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = DarkCard),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Default.Receipt,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = BudgetBruPrimary.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("No activity yet", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Tap the + button to add expenses or income",
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             } else {
-                recentExpenses.forEachIndexed { index, expense ->
+                recentActivity.forEachIndexed { index, transaction ->
                     AnimatedExpenseItem(index) {
-                        ExpenseCard(
-                            expense = expense,
+                        TransactionCard(
+                            transaction = transaction,
                             onDelete = {
-                                expenseToDelete = expense
-                                showDeleteConfirmation = true
+                                when (transaction) {
+                                    is Transaction.Expense -> {
+                                        scope.launch {
+                                            repository.deleteExpenseById(transaction.id)
+                                            viewModel.refresh()
+                                            snackbarHostState.showSnackbar("Expense deleted")
+                                        }
+                                    }
+                                    is Transaction.Income -> {
+                                        viewModel.deleteIncome(transaction.id)
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("Income deleted")
+                                        }
+                                    }
+                                }
                             }
                         )
                     }
@@ -335,7 +547,7 @@ fun HomeScreen(
         }
     }
 
-    // Delete Confirmation Dialog
+    // Delete Expense Confirmation Dialog
     if (showDeleteConfirmation && expenseToDelete != null) {
         AlertDialog(
             onDismissRequest = {
@@ -386,7 +598,145 @@ fun HomeScreen(
             textContentColor = Color.White
         )
     }
+
+    // Add Expense Dialog
+    if (showAddExpenseDialog) {
+        var customAmount by remember { mutableStateOf("") }
+        var description by remember { mutableStateOf("") }
+        var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
+
+        AlertDialog(
+            onDismissRequest = { showAddExpenseDialog = false },
+            title = { Text("Add Expense", fontWeight = FontWeight.Bold, color = BudgetBruPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = customAmount,
+                        onValueChange = { customAmount = it },
+                        label = { Text("Amount (R)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Text("R") },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Text("Category", fontSize = 13.sp, color = BudgetBruSecondary)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(categories) { category ->
+                            FilterChip(
+                                selected = selectedCategoryId == category.id,
+                                onClick = { selectedCategoryId = category.id },
+                                label = { Text(category.name) }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val amt = customAmount.toDoubleOrNull()
+                        if (description.isNotBlank() && amt != null && selectedCategoryId != null && amt > 0) {
+                            scope.launch {
+                                viewModel.addQuickExpense(amt, description, selectedCategoryId!!)
+                                showAddExpenseDialog = false
+                                snackbarHostState.showSnackbar("Expense added!")
+                            }
+                        } else {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Please fill all fields")
+                            }
+                        }
+                    }
+                ) {
+                    Text("Save", color = BudgetBruPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddExpenseDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = DarkCard
+        )
+    }
+
+    // Add Income Dialog
+    if (showAddIncomeDialog) {
+        var incomeAmount by remember { mutableStateOf("") }
+        var incomeDescription by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddIncomeDialog = false },
+            title = { Text("Add Income", fontWeight = FontWeight.Bold, color = BudgetBruSecondary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Add money to your budget",
+                        fontSize = 13.sp,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = incomeAmount,
+                        onValueChange = { incomeAmount = it },
+                        label = { Text("Income Amount (R)") },
+                        placeholder = { Text("e.g., 5000") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Text("R") },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = incomeDescription,
+                        onValueChange = { incomeDescription = it },
+                        label = { Text("Description (Optional)") },
+                        placeholder = { Text("e.g., Salary, Freelance, Gift") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val amount = incomeAmount.toDoubleOrNull()
+                        if (amount != null && amount > 0) {
+                            scope.launch {
+                                try {
+                                    val description = if (incomeDescription.isNotBlank()) incomeDescription else "Income Added"
+                                    viewModel.addIncome(amount, description)
+                                    showAddIncomeDialog = false
+                                    snackbarHostState.showSnackbar("✅ R${String.format("%.2f", amount)} added!")
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar("Error: ${e.message}")
+                                }
+                            }
+                        } else {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Please enter a valid amount")
+                            }
+                        }
+                    }
+                ) {
+                    Text("Add Income", color = BudgetBruSecondary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddIncomeDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = DarkCard
+        )
+    }
 }
+
+// ==================== UI COMPONENTS ====================
 
 @Composable
 fun BalanceMiniStat(title: String, value: String, color: Color) {
@@ -446,88 +796,6 @@ fun QuickStatCard(
 }
 
 @Composable
-fun ExpenseCard(
-    expense: ExpenseEntry,
-    onDelete: (() -> Unit)? = null
-) {
-    var showDeleteButton by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { showDeleteButton = !showDeleteButton },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = BudgetBruPrimary.copy(alpha = 0.2f),
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Receipt,
-                            contentDescription = null,
-                            tint = BudgetBruPrimary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        expense.description,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = SimpleDateFormat("dd MMM yyyy • HH:mm", Locale.getDefault()).format(expense.date),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Delete button (appears on click)
-            AnimatedVisibility(
-                visible = showDeleteButton && onDelete != null,
-                enter = fadeIn() + slideInHorizontally(),
-                exit = fadeOut() + slideOutHorizontally()
-            ) {
-                Row {
-                    IconButton(onClick = onDelete!!) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = BudgetBruAccent
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-            }
-
-            Text(
-                text = "R${String.format("%,.2f", expense.amount)}",
-                color = BudgetBruAccent,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
-        }
-    }
-}
-
-@Composable
 fun QuickAddChip(category: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
@@ -580,39 +848,9 @@ fun AnimatedExpenseItem(index: Int, content: @Composable () -> Unit) {
 
     AnimatedVisibility(
         visible = isVisible,
-        enter = fadeIn(animationSpec = tween(300)) +
-                slideInVertically(initialOffsetY = { it / 2 })
+        enter = fadeIn(animationSpec = tween(300)) + slideInVertically(initialOffsetY = { it / 2 })
     ) {
         content()
-    }
-}
-
-@Composable
-fun EmptyStateCard(title: String, message: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = BudgetBruPrimary.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                message,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 
@@ -646,6 +884,102 @@ fun ShimmerCard() {
                     modifier = Modifier.width(100.dp).height(12.dp)
                 ) {}
             }
+        }
+    }
+}
+
+// ==================== TRANSACTION CARD ====================
+
+@Composable
+fun TransactionCard(
+    transaction: Transaction,
+    onDelete: () -> Unit
+) {
+    var showDeleteButton by remember { mutableStateOf(false) }
+
+    val isExpense = transaction is Transaction.Expense
+    val icon = if (isExpense) Icons.Default.Receipt else Icons.Default.AttachMoney
+    val iconColor = if (isExpense) BudgetBruAccent else BudgetBruSecondary
+    val amountColor = if (isExpense) BudgetBruAccent else BudgetBruSecondary
+    val amountPrefix = if (isExpense) "-R" else "+R"
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showDeleteButton = !showDeleteButton },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = iconColor.copy(alpha = 0.2f),
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            tint = iconColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = transaction.description,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = SimpleDateFormat("dd MMM yyyy • HH:mm", Locale.getDefault()).format(transaction.date),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (isExpense && (transaction as Transaction.Expense).categoryName.isNotBlank()) {
+                        Text(
+                            text = (transaction as Transaction.Expense).categoryName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = BudgetBruSecondary
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = showDeleteButton,
+                enter = fadeIn() + slideInHorizontally(),
+                exit = fadeOut() + slideOutHorizontally()
+            ) {
+                Row {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = BudgetBruAccent
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
+
+            Text(
+                text = "$amountPrefix${String.format("%,.2f", transaction.amount)}",
+                color = amountColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
         }
     }
 }

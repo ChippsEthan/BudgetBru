@@ -8,7 +8,7 @@ import java.util.Date
 @Dao
 interface ExpenseEntryDao {
     @Insert
-    suspend fun insertEntry(entry: ExpenseEntry): Long  // Returns the row ID
+    suspend fun insertEntry(entry: ExpenseEntry): Long
 
     @Delete
     suspend fun deleteEntry(entry: ExpenseEntry)
@@ -19,7 +19,7 @@ interface ExpenseEntryDao {
     @Query("""
         SELECT * FROM expense_entries 
         WHERE date BETWEEN :startDate AND :endDate 
-        ORDER BY date ASC
+        ORDER BY date DESC
     """)
     fun getEntriesBetweenDates(startDate: Date, endDate: Date): Flow<List<ExpenseEntry>>
 

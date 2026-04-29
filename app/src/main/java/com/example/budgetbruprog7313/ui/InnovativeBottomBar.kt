@@ -1,11 +1,12 @@
+// KEEP YOUR ORIGINAL PACKAGE LINE HERE IF IT IS DIFFERENT
 package com.example.budgetbruprog7313.ui.navigation
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,141 +26,125 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.budgetbruprog7313.ui.Screen
-import com.example.budgetbruprog7313.ui.theme.BudgetBruPrimary
-import com.example.budgetbruprog7313.ui.theme.BudgetBruSecondary
-import com.example.budgetbruprog7313.ui.theme.DarkCard
+
+// --- LOCAL THEME COLORS ---
+val BudgetBruPrimary = Color(0xFF6366F1)
+val BudgetBruSecondary = Color(0xFFA855F7)
+val DarkDockBg = Color(0xFF0F172A).copy(alpha = 0.96f)
+
+// --- SCREEN DEFINITIONS (Defined here to prevent "Unresolved Screen" errors) ---
+sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
+    data object Home : Screen("home", "Home", Icons.Default.Home)
+    data object Expenses : Screen("expenses", "Reports", Icons.Default.List)
+    data object Goals : Screen("goals", "Goals", Icons.Default.Flag)
+    data object ManageCategories : Screen("manage_categories", "Categories", Icons.Default.Category)
+    data object More : Screen("more", "More", Icons.Default.MoreVert)
+}
 
 @Composable
 fun InnovativeBottomBar(navController: NavController) {
     val items = listOf(
-        NavItem(Screen.Home, "Home", Icons.Default.Home),
-        NavItem(Screen.Expenses, "Reports", Icons.Default.TrendingUp),
-        NavItem(Screen.Goals, "Goals", Icons.Default.Flag),
-        NavItem(Screen.ManageCategories, "Categories", Icons.Default.Category),
-        NavItem(Screen.More, "More", Icons.Default.MoreVert)  // Changed from IOU to More
+        Screen.Home,
+        Screen.Expenses,
+        Screen.Goals,
+        Screen.ManageCategories,
+        Screen.More
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-    val currentRoute = currentDestination?.route
+    val currentRoute = navBackStackEntry?.destination?.route
+    val selectedIndex = items.indexOfFirst { it.route == currentRoute }.coerceAtLeast(0)
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .shadow(
-                elevation = 15.dp,
-                shape = RoundedCornerShape(30.dp),
-                spotColor = BudgetBruPrimary.copy(alpha = 0.2f),
-                ambientColor = BudgetBruSecondary.copy(alpha = 0.15f)
-            ),
-        shape = RoundedCornerShape(30.dp),
-        color = DarkCard,
-        tonalElevation = 0.dp
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+                .height(80.dp)
+                .shadow(20.dp, RoundedCornerShape(32.dp), ambientColor = BudgetBruPrimary)
+                .clip(RoundedCornerShape(32.dp))
+                .background(DarkDockBg)
         ) {
-            items.forEach { item ->
-                val isSelected = item.screen.route == currentRoute
-                ModernNavItem(
-                    item = item,
-                    isSelected = isSelected,
-                    onClick = {
-                        navController.navigate(item.screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+            // --- BOXWITHCONSTRAINTS SCOPE ACTIVATED ---
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                // Using 'this.' ensures the compiler sees we are using the scope
+                val totalWidth = this.maxWidth
+                val itemWidth = totalWidth / items.size
+                val pillWidth = itemWidth * 0.70f
+
+                val indicatorOffset by animateDpAsState(
+                    targetValue = (itemWidth * selectedIndex) + (itemWidth - pillWidth) / 2,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    label = "Indicator"
+                )
+
+                // The Animated Background Pill
+                Box(
+                    modifier = Modifier
+                        .offset(x = indicatorOffset)
+                        .align(Alignment.CenterStart)
+                        .width(pillWidth)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.horizontalGradient(listOf(BudgetBruPrimary, BudgetBruSecondary))
+                        )
+                )
+
+                // The Navigation Items
+                Row(modifier = Modifier.fillMaxSize()) {
+                    items.forEachIndexed { index, screen ->
+                        val isSelected = index == selectedIndex
+                        val iconScale by animateFloatAsState(if (isSelected) 1.2f else 1f)
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    if (!isSelected) {
+                                        navController.navigate(screen.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = screen.icon,
+                                    contentDescription = screen.title,
+                                    tint = if (isSelected) Color.White else Color.Gray,
+                                    modifier = Modifier.size(24.dp).scale(iconScale)
+                                )
+                                AnimatedVisibility(visible = isSelected) {
+                                    Text(
+                                        text = screen.title,
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
                     }
-                )
+                }
             }
         }
     }
 }
-
-@Composable
-fun ModernNavItem(
-    item: NavItem,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.1f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "scale"
-    )
-
-    Column(
-        modifier = Modifier
-            .wrapContentSize()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { onClick() }
-            .scale(scale)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Animated icon background for selected
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                BudgetBruPrimary.copy(alpha = 0.3f),
-                                Color.Transparent
-                            ),
-                            radius = 25f
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    item.icon,
-                    contentDescription = item.title,
-                    tint = BudgetBruPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        } else {
-            Icon(
-                item.icon,
-                contentDescription = item.title,
-                tint = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        // Label
-        Text(
-            text = item.title,
-            fontSize = if (isSelected) 11.sp else 10.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) BudgetBruPrimary else Color.White.copy(alpha = 0.5f),
-            maxLines = 1
-        )
-    }
-}
-
-data class NavItem(
-    val screen: Screen,
-    val title: String,
-    val icon: ImageVector
-)

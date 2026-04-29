@@ -9,7 +9,6 @@ import com.example.budgetbruprog7313.data.model.ExpenseEntry
 import com.example.budgetbruprog7313.data.model.User
 import com.example.budgetbruprog7313.data.model.Settings
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.Date
 
@@ -97,7 +96,6 @@ class BudgetRepository(private val db: AppDatabase) {
             Log.d(TAG, "Current settings before save: $currentSettings")
 
             if (currentSettings != null) {
-                // Update existing settings - preserve the ID
                 val updatedSettings = currentSettings.copy(
                     minMonthlyGoal = min,
                     maxMonthlyGoal = max
@@ -105,7 +103,6 @@ class BudgetRepository(private val db: AppDatabase) {
                 settingsDao.updateSettings(updatedSettings)
                 Log.d(TAG, "Updated existing settings (ID: ${currentSettings.id}): min=$min, max=$max")
             } else {
-                // Create new settings - let Room generate ID
                 val newSettings = Settings(
                     minMonthlyGoal = min,
                     maxMonthlyGoal = max,
@@ -115,7 +112,6 @@ class BudgetRepository(private val db: AppDatabase) {
                 Log.d(TAG, "Created new settings with ID: $newId, min=$min, max=$max")
             }
 
-            // Verify save
             val verifySettings = settingsDao.getSettingsSync()
             Log.d(TAG, "Verification after save: Min=${verifySettings?.minMonthlyGoal}, Max=${verifySettings?.maxMonthlyGoal}")
 

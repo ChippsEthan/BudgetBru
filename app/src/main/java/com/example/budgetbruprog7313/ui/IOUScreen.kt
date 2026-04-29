@@ -3,6 +3,7 @@ package com.example.budgetbruprog7313.ui
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,12 +22,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.budgetbruprog7313.ui.theme.*
-import com.google.firebase.crashlytics.buildtools.reloc.com.google.common.reflect.TypeToken
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -40,6 +42,7 @@ fun IOUScreen() {
     var showAddDialog by remember { mutableStateOf(false) }
     var selectedIOU by remember { mutableStateOf<IOUEntry?>(null) }
     var filter by remember { mutableStateOf("all") } // all, lent, borrowed
+    var showStats by remember { mutableStateOf(true) }
 
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
@@ -51,7 +54,6 @@ fun IOUScreen() {
             val type = object : TypeToken<List<IOUEntry>>() {}.type
             ious = gson.fromJson(json, type)
         } else {
-            // Sample data for first run
             ious = getSampleIOUs()
             saveIOUs(sharedPrefs, ious)
         }
@@ -65,28 +67,42 @@ fun IOUScreen() {
     // Calculate totals
     val totalLent = ious.filter { it.type == "lent" && !it.isSettled }.sumOf { it.amount }
     val totalBorrowed = ious.filter { it.type == "borrowed" && !it.isSettled }.sumOf { it.amount }
+    val settledCount = ious.count { it.isSettled }
+    val activeCount = ious.count { !it.isSettled }
+
+    // Animated values
+    val animatedLent by animateFloatAsState(
+        targetValue = totalLent.toFloat(),
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "lent"
+    )
+    val animatedBorrowed by animateFloatAsState(
+        targetValue = totalBorrowed.toFloat(),
+        animationSpec = tween(800, easing = FastOutSlowInEasing),
+        label = "borrowed"
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground)
     ) {
-        // Header
+        // Animated Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(BudgetBruPrimary, BudgetBruSecondary)
+                        colors = listOf(BudgetBruPrimary, BudgetBruSecondary, Color(0xFF6B21A5))
                     ),
-                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                    shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
                 )
                 .padding(24.dp)
         ) {
             Column {
                 Text(
                     "🤝 IOU Tracker",
-                    fontSize = 28.sp,
+                    fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -98,27 +114,59 @@ fun IOUScreen() {
             }
         }
 
-        // Stats Cards
+        // Stats Cards Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            StatSummaryCard(
+            ModernStatCard(
                 title = "You Lent",
-                amount = totalLent,
+                amount = animatedLent,
                 color = BudgetBruPrimary,
                 icon = Icons.Default.ArrowUpward,
                 modifier = Modifier.weight(1f)
             )
-            StatSummaryCard(
+            ModernStatCard(
                 title = "You Borrowed",
-                amount = totalBorrowed,
+                amount = animatedBorrowed,
                 color = BudgetBruAccent,
                 icon = Icons.Default.ArrowDownward,
                 modifier = Modifier.weight(1f)
             )
+        }
+
+        // Summary Row
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                SummaryChip(
+                    label = "Active",
+                    count = activeCount,
+                    color = BudgetBruPrimary
+                )
+                SummaryChip(
+                    label = "Settled",
+                    count = settledCount,
+                    color = BudgetBruSecondary
+                )
+                SummaryChip(
+                    label = "Total",
+                    count = ious.size,
+                    color = BudgetBruAccent
+                )
+            }
         }
 
         // Filter Chips
@@ -130,7 +178,8 @@ fun IOUScreen() {
                 else -> 0
             },
             containerColor = DarkBackground,
-            edgePadding = 16.dp
+            edgePadding = 16.dp,
+            indicator = {}
         ) {
             listOf("all", "lent", "borrowed").forEachIndexed { index, type ->
                 FilterChip(
@@ -139,17 +188,20 @@ fun IOUScreen() {
                     label = {
                         Text(
                             when (type) {
-                                "all" -> "All"
+                                "all" -> "All IOUs"
                                 "lent" -> "You Lent"
                                 "borrowed" -> "You Borrowed"
                                 else -> ""
-                            }
+                            },
+                            fontWeight = if (filter == type) FontWeight.Bold else FontWeight.Normal
                         )
                     },
                     modifier = Modifier.padding(end = 8.dp),
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = BudgetBruPrimary,
-                        selectedLabelColor = Color.White
+                        selectedLabelColor = Color.White,
+                        disabledContainerColor = DarkCard,
+                        disabledLabelColor = Color.White.copy(alpha = 0.5f)
                     )
                 )
             }
@@ -160,12 +212,14 @@ fun IOUScreen() {
             onClick = { showAddDialog = true },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = BudgetBruPrimary)
         ) {
-            Icon(Icons.Default.Add, contentDescription = "Add")
+            Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Add New IOU")
+            Text("Add New IOU", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         }
 
         // IOU List
@@ -184,31 +238,31 @@ fun IOUScreen() {
                     Icon(
                         Icons.Default.People,
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = BudgetBruPrimary.copy(alpha = 0.5f)
+                        modifier = Modifier.size(80.dp),
+                        tint = BudgetBruPrimary.copy(alpha = 0.3f)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         "No IOUs yet",
-                        fontSize = 18.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "Tap + to add money you lent or borrowed",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        "Tap the + button to add money you lent or borrowed",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(filteredIOUs) { iou ->
-                    IOUCard(
+                    ModernIOUCard(
                         iou = iou,
                         onSettle = {
                             ious = ious.map {
@@ -229,7 +283,7 @@ fun IOUScreen() {
 
     // Add IOU Dialog
     if (showAddDialog) {
-        AddIOUDialog(
+        ModernAddIOUDialog(
             onAdd = { newIOU ->
                 ious = listOf(newIOU) + ious
                 showAddDialog = false
@@ -240,7 +294,7 @@ fun IOUScreen() {
 
     // IOU Detail Dialog
     if (selectedIOU != null) {
-        IOUDetailDialog(
+        ModernIOUDetailDialog(
             iou = selectedIOU!!,
             onDismiss = { selectedIOU = null },
             onSettle = {
@@ -258,29 +312,32 @@ fun IOUScreen() {
     }
 }
 
-private fun saveIOUs(sharedPrefs: SharedPreferences, ious: List<IOUEntry>) {
-    val gson = Gson()
-    val json = gson.toJson(ious)
-    sharedPrefs.edit().putString("ious", json).apply()
-}
-
 @Composable
-fun StatSummaryCard(title: String, amount: Double, color: Color, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
+fun ModernStatCard(title: String, amount: Float, color: Color, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(24.dp))
+            Surface(
+                modifier = Modifier.size(48.dp),
+                shape = CircleShape,
+                color = color.copy(alpha = 0.15f)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(24.dp))
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(title, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+            Text(title, fontSize = 13.sp, color = Color.White.copy(alpha = 0.7f))
             Text(
-                "R${String.format("%.2f", amount)}",
-                fontSize = 20.sp,
+                "R${String.format("%,.2f", amount)}",
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
@@ -289,111 +346,196 @@ fun StatSummaryCard(title: String, amount: Double, color: Color, icon: androidx.
 }
 
 @Composable
-fun IOUCard(iou: IOUEntry, onSettle: () -> Unit, onDelete: () -> Unit, onClick: () -> Unit, dateFormat: SimpleDateFormat) {
+fun SummaryChip(label: String, count: Int, color: Color) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))
+        Text(
+            "$count",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+    }
+}
+
+@Composable
+fun ModernIOUCard(iou: IOUEntry, onSettle: () -> Unit, onDelete: () -> Unit, onClick: () -> Unit, dateFormat: SimpleDateFormat) {
+    var showActions by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+            .clickable { showActions = !showActions },
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (iou.isSettled) DarkCard.copy(alpha = 0.6f) else DarkCard
-        )
+            containerColor = if (iou.isSettled) DarkCard.copy(alpha = 0.5f) else DarkCard
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                color = (if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent).copy(alpha = 0.15f)
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        if (iou.type == "lent") Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                        contentDescription = null,
-                        tint = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // Avatar
+                Surface(
+                    modifier = Modifier.size(52.dp),
+                    shape = CircleShape,
+                    color = (if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent).copy(alpha = 0.15f)
                 ) {
-                    Text(
-                        if (iou.type == "lent") "Lent to ${iou.personName}" else "Borrowed from ${iou.personName}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
-                    )
-                    if (iou.isSettled) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = BudgetBruPrimary.copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                "Settled",
-                                fontSize = 10.sp,
-                                color = BudgetBruPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            iou.personName.take(1).uppercase(),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
+                        )
                     }
                 }
+                Spacer(modifier = Modifier.width(14.dp))
+
+                // Content
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            iou.personName,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
+                        )
+                        if (iou.isSettled) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = BudgetBruPrimary.copy(alpha = 0.2f)
+                            ) {
+                                Text(
+                                    "SETTLED",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BudgetBruPrimary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        iou.reason,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        dateFormat.format(iou.date),
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = 0.4f)
+                    )
+                }
+
+                // Amount
                 Text(
-                    iou.reason,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-                Text(
-                    dateFormat.format(iou.date),
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.5f)
+                    "R${String.format("%,.2f", iou.amount)}",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
                 )
             }
 
-            Text(
-                "R${String.format("%.2f", iou.amount)}",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
-            )
+            // Action Buttons (appear on click)
+            AnimatedVisibility(
+                visible = showActions && !iou.isSettled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp, start = 16.dp, end = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onSettle,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Done, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Mark Settled")
+                    }
+                    OutlinedButton(
+                        onClick = onDelete,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = BudgetBruAccent
+                        )
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Delete")
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun AddIOUDialog(onAdd: (IOUEntry) -> Unit, onDismiss: () -> Unit) {
+fun ModernAddIOUDialog(onAdd: (IOUEntry) -> Unit, onDismiss: () -> Unit) {
     var personName by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("lent") }
     var reason by remember { mutableStateOf("") }
+    var selectedPreset by remember { mutableStateOf(0) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "Add IOU",
-                fontWeight = FontWeight.Bold,
-                color = BudgetBruPrimary
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Type selector
+    val presets = listOf(50.0, 100.0, 200.0, 500.0)
+
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "Add New IOU",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BudgetBruPrimary
+                )
+
+                // Type Selector
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     FilterChip(
                         selected = type == "lent",
                         onClick = { type = "lent" },
-                        label = { Text("I Lent Money") },
+                        label = { Text("💸 I Lent") },
+                        modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = BudgetBruPrimary
                         )
@@ -401,7 +543,8 @@ fun AddIOUDialog(onAdd: (IOUEntry) -> Unit, onDismiss: () -> Unit) {
                     FilterChip(
                         selected = type == "borrowed",
                         onClick = { type = "borrowed" },
-                        label = { Text("I Borrowed Money") },
+                        label = { Text("💰 I Borrowed") },
+                        modifier = Modifier.weight(1f),
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = BudgetBruAccent
                         )
@@ -411,153 +554,249 @@ fun AddIOUDialog(onAdd: (IOUEntry) -> Unit, onDismiss: () -> Unit) {
                 OutlinedTextField(
                     value = personName,
                     onValueChange = { personName = it },
-                    label = { Text(if (type == "lent") "Who borrowed from you?" else "Who did you borrow from?") },
-                    placeholder = { Text("Friend's name") },
+                    label = { Text("Friend's Name") },
+                    placeholder = { Text("e.g., John") },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(12.dp)
                 )
 
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Amount (R)") },
-                    placeholder = { Text("e.g., 150.00") },
-                    singleLine = true,
-                    leadingIcon = { Text("R", fontWeight = FontWeight.Bold) }
-                )
+                // Amount with presets
+                Column {
+                    OutlinedTextField(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = { Text("Amount (R)") },
+                        placeholder = { Text("e.g., 150.00") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        leadingIcon = { Text("R", fontWeight = FontWeight.Bold) },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        presets.forEach { preset ->
+                            Surface(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable { amount = preset.toString() },
+                                color = if (amount.toDoubleOrNull() == preset)
+                                    BudgetBruPrimary.copy(alpha = 0.3f)
+                                else DarkCard
+                            ) {
+                                Text(
+                                    "R$preset",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    fontSize = 12.sp,
+                                    color = if (amount.toDoubleOrNull() == preset) BudgetBruPrimary else Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = reason,
                     onValueChange = { reason = it },
                     label = { Text("Reason") },
-                    placeholder = { Text("e.g., Lunch, Movie tickets, Rent") },
-                    singleLine = true
+                    placeholder = { Text("e.g., Lunch, Movie, Rent") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
                 )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val amt = amount.toDoubleOrNull()
-                    if (personName.isNotBlank() && amt != null && amt > 0 && reason.isNotBlank()) {
-                        val newIOU = IOUEntry(
-                            id = System.currentTimeMillis(),
-                            personName = personName.trim(),
-                            amount = amt,
-                            type = type,
-                            reason = reason,
-                            date = Date(),
-                            isSettled = false
-                        )
-                        onAdd(newIOU)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Cancel")
+                    }
+                    Button(
+                        onClick = {
+                            val amt = amount.toDoubleOrNull()
+                            if (personName.isNotBlank() && amt != null && amt > 0 && reason.isNotBlank()) {
+                                val newIOU = IOUEntry(
+                                    id = System.currentTimeMillis(),
+                                    personName = personName.trim(),
+                                    amount = amt,
+                                    type = type,
+                                    reason = reason,
+                                    date = Date(),
+                                    isSettled = false
+                                )
+                                onAdd(newIOU)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (type == "lent") BudgetBruPrimary else BudgetBruAccent)
+                    ) {
+                        Text("Add IOU")
                     }
                 }
-            ) {
-                Text("Add", color = BudgetBruPrimary)
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        },
-        containerColor = DarkCard
-    )
+        }
+    }
 }
 
 @Composable
-fun IOUDetailDialog(iou: IOUEntry, onDismiss: () -> Unit, onSettle: () -> Unit, onDelete: () -> Unit) {
+fun ModernIOUDetailDialog(iou: IOUEntry, onDismiss: () -> Unit, onSettle: () -> Unit, onDelete: () -> Unit) {
     val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
+    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(
-                    if (iou.type == "lent") Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                    contentDescription = null,
-                    tint = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
-                )
-                Text(
-                    if (iou.type == "lent") "Money Lent" else "Money Borrowed",
-                    fontWeight = FontWeight.Bold,
-                    color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
-                )
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoRow("Person", iou.personName, if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent)
-                InfoRow("Amount", "R${String.format("%.2f", iou.amount)}", if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent)
-                InfoRow("Date", dateFormat.format(iou.date), Color.White.copy(alpha = 0.7f))
-                InfoRow("Reason", iou.reason, Color.White.copy(alpha = 0.7f))
-
-                if (iou.isSettled) {
+                // Header
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(8.dp),
-                        color = BudgetBruPrimary.copy(alpha = 0.15f)
+                        modifier = Modifier.size(60.dp),
+                        shape = CircleShape,
+                        color = (if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent).copy(alpha = 0.15f)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = BudgetBruPrimary, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("This IOU has been settled", color = BudgetBruPrimary)
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                iou.personName.take(1).uppercase(),
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
+                            )
                         }
                     }
-                }
-            }
-        },
-        confirmButton = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (!iou.isSettled) {
-                    TextButton(
-                        onClick = onSettle,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Done, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Mark Settled")
+                    Column {
+                        Text(
+                            if (iou.type == "lent") "Lent to" else "Borrowed from",
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            iou.personName,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent
+                        )
                     }
                 }
-                TextButton(
-                    onClick = onDelete,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.textButtonColors(contentColor = BudgetBruAccent)
+
+                Divider(color = Color.White.copy(alpha = 0.1f))
+
+                // Details Grid
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Delete")
+                    DetailItem(
+                        label = "Amount",
+                        value = "R${String.format("%,.2f", iou.amount)}",
+                        color = if (iou.type == "lent") BudgetBruPrimary else BudgetBruAccent,
+                        modifier = Modifier.weight(1f)
+                    )
+                    DetailItem(
+                        label = "Status",
+                        value = if (iou.isSettled) "Settled" else "Pending",
+                        color = if (iou.isSettled) BudgetBruPrimary else Color(0xFFFFA726),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                DetailItem(
+                    label = "Reason",
+                    value = iou.reason,
+                    color = Color.White,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                DetailItem(
+                    label = "Date",
+                    value = dateFormat.format(iou.date),
+                    color = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (!iou.isSettled) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = onSettle,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = BudgetBruPrimary)
+                        ) {
+                            Icon(Icons.Default.Done, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Mark Settled")
+                        }
+                        OutlinedButton(
+                            onClick = onDelete,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = BudgetBruAccent
+                            )
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Delete")
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Close")
+                    }
                 }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
-            }
-        },
-        containerColor = DarkCard
-    )
+        }
+    }
 }
 
 @Composable
-fun InfoRow(label: String, value: String, color: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+fun DetailItem(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f))
     ) {
-        Text(label, fontSize = 13.sp, color = Color.White.copy(alpha = 0.5f))
-        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = color)
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(label, fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+            Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = color)
+        }
     }
+}
+
+private fun saveIOUs(sharedPrefs: SharedPreferences, ious: List<IOUEntry>) {
+    val gson = Gson()
+    val json = gson.toJson(ious)
+    sharedPrefs.edit().putString("ious", json).apply()
 }
 
 private fun getSampleIOUs(): List<IOUEntry> {
@@ -565,10 +804,10 @@ private fun getSampleIOUs(): List<IOUEntry> {
     return listOf(
         IOUEntry(
             id = 1,
-            personName = "John",
+            personName = "Alex",
             amount = 150.0,
             type = "lent",
-            reason = "Lunch",
+            reason = "Lunch & Coffee",
             date = calendar.apply { add(Calendar.DAY_OF_MONTH, -2) }.time,
             isSettled = false
         ),
@@ -577,7 +816,7 @@ private fun getSampleIOUs(): List<IOUEntry> {
             personName = "Sarah",
             amount = 50.0,
             type = "borrowed",
-            reason = "Movie ticket",
+            reason = "Movie tickets",
             date = calendar.apply { add(Calendar.DAY_OF_MONTH, -5) }.time,
             isSettled = false
         ),
@@ -597,7 +836,7 @@ data class IOUEntry(
     val id: Long,
     val personName: String,
     val amount: Double,
-    val type: String, // "lent" or "borrowed"
+    val type: String,
     val reason: String,
     val date: Date,
     val isSettled: Boolean

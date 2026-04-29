@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.budgetbruprog7313.data.model.Category
 import com.example.budgetbruprog7313.data.model.ExpenseEntry
+import com.example.budgetbruprog7313.data.model.Transaction
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -17,61 +18,84 @@ class HomeViewModel(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // Get current month's start and end dates
+    // Income transactions (in‑memory)
+    private val _incomeTransactions = MutableStateFlow<List<Transaction.Income>>(emptyList())
+    val incomeTransactions: StateFlow<List<Transaction.Income>> = _incomeTransactions.asStateFlow()
+
+    // Expenses from DB
+    private val _expenses = MutableStateFlow<List<ExpenseEntry>>(emptyList())
+    val expenses: StateFlow<List<ExpenseEntry>> = _expenses.asStateFlow()
+
+    // Categories map
+    private val categoriesMap = mutableMapOf<Long, String>()
+
+    // Combined recent activity (expenses + income)
+    val recentActivity: StateFlow<List<Transaction>> = combine(
+        _expenses,
+        _incomeTransactions
+    ) { expenses, incomes ->
+        val expenseTransactions = expenses.map { expense ->
+            Transaction.Expense(
+                id = expense.id,
+                amount = expense.amount,
+                description = expense.description,
+                date = expense.date,
+                categoryId = expense.categoryId,
+                categoryName = categoriesMap[expense.categoryId] ?: "",
+                startTime = expense.startTime,
+                endTime = expense.endTime,
+                photoPath = expense.photoPath
+            )
+        }
+        (expenseTransactions + incomes).sortedByDescending { it.date }.take(10)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private fun getCurrentMonthRange(): Pair<Date, Date> {
         val calendar = Calendar.getInstance()
-        val startDate = calendar.apply {
+        val start = calendar.apply {
             set(Calendar.DAY_OF_MONTH, 1)
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.time
-
-        val endDate = calendar.apply {
+        val end = calendar.apply {
             set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
             set(Calendar.HOUR_OF_DAY, 23)
             set(Calendar.MINUTE, 59)
             set(Calendar.SECOND, 59)
             set(Calendar.MILLISECOND, 999)
         }.time
-
-        return Pair(startDate, endDate)
+        return Pair(start, end)
     }
 
     private val currentMonthRange = getCurrentMonthRange()
+    private val currentMonthExpenses = repository.getEntriesBetweenDates(currentMonthRange.first, currentMonthRange.second)
 
-    // Real data from database - current month expenses
-    private val currentMonthExpenses: Flow<List<ExpenseEntry>> =
-        repository.getEntriesBetweenDates(currentMonthRange.first, currentMonthRange.second)
-
-    // Total spent this month
     val totalSpent: StateFlow<Double> = currentMonthExpenses
-        .map { expenses -> expenses.sumOf { it.amount } }
+        .map { it.sumOf { exp -> exp.amount } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
-    // Recent 5 expenses
-    val recentExpenses: StateFlow<List<ExpenseEntry>> =
-        repository.getEntriesBetweenDates(Date(0), Date())
-            .map { expenses -> expenses.sortedByDescending { it.date }.take(5) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    // Real monthly income from database
     private val monthlyIncome: StateFlow<Double> = repository.getMonthlyIncome()
         .map { it ?: 5000.0 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5000.0)
 
-    // Available balance (real income minus spent)
     val availableBalance: StateFlow<Double> = combine(totalSpent, monthlyIncome) { spent, income ->
         income - spent
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5000.0)
 
-    // Get all categories for quick add
     val categories: StateFlow<List<Category>> = repository.allCategories
+        .onEach { list ->
+            list.forEach { categoriesMap[it.id] = it.name }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
+            // Load expenses
+            repository.getEntriesBetweenDates(Date(0), Date()).collect { expensesList ->
+                _expenses.value = expensesList.sortedByDescending { it.date }.take(10)
+            }
             _isLoading.value = false
         }
     }
@@ -79,9 +103,9 @@ class HomeViewModel(
     fun refresh() {
         viewModelScope.launch {
             _isLoading.value = true
-            totalSpent.collect { /* no-op */ }
-            recentExpenses.collect { /* no-op */ }
-            availableBalance.collect { /* no-op */ }
+            repository.getEntriesBetweenDates(Date(0), Date()).collect { expensesList ->
+                _expenses.value = expensesList.sortedByDescending { it.date }.take(10)
+            }
             _isLoading.value = false
         }
     }
@@ -99,14 +123,45 @@ class HomeViewModel(
                 categoryId = categoryId,
                 photoPath = null
             )
+            refresh()
         }
     }
 
-    // Add delete expense method
-    fun deleteExpense(expense: ExpenseEntry) {
+    fun addIncome(amount: Double, description: String) {
         viewModelScope.launch {
-            // You need to add this method to your repository and DAO
-            // repository.deleteExpense(expense)
+            val now = Date()
+            val income = Transaction.Income(
+                id = System.currentTimeMillis(),
+                amount = amount,
+                description = description.ifBlank { "Income Added" },
+                date = now,
+                source = "Manual"
+            )
+            val current = _incomeTransactions.value.toMutableList()
+            current.add(0, income)
+            _incomeTransactions.value = current
+
+            // Update real income in settings
+            val currentIncome = repository.getMonthlyIncome().first()
+            val newIncome = (currentIncome ?: 5000.0) + amount
+            repository.saveMonthlyIncome(newIncome)
+
+            refresh()
+        }
+    }
+
+    fun deleteExpense(expenseId: Long) {
+        viewModelScope.launch {
+            repository.deleteExpenseById(expenseId)
+            refresh()
+        }
+    }
+
+    fun deleteIncome(incomeId: Long) {
+        viewModelScope.launch {
+            val current = _incomeTransactions.value.toMutableList()
+            current.removeAll { it.id == incomeId }
+            _incomeTransactions.value = current
         }
     }
 }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -28,12 +30,16 @@ import com.example.budgetbruprog7313.ui.theme.*
 @Composable
 fun TipsScreen() {
     var selectedTip by remember { mutableStateOf<Tip?>(null) }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("All") }
 
-    val tips = listOf(
+    val categories = listOf("All", "Budgeting", "Saving", "Cutting Costs", "Student Perks", "Emergency")
+
+    val allTips = listOf(
         Tip(
             id = 1,
             title = "50/30/20 Rule",
-            description = "Allocate 50% of your income to needs, 30% to wants, and 20% to savings.",
+            description = "Allocate 50% to needs, 30% to wants, 20% to savings",
             fullContent = """
                 The 50/30/20 rule is a simple budgeting framework:
                 
@@ -51,7 +57,7 @@ fun TipsScreen() {
         Tip(
             id = 2,
             title = "Track Every Expense",
-            description = "Small purchases add up. Track everything to identify spending patterns.",
+            description = "Small purchases add up. Track everything to identify spending patterns",
             fullContent = """
                 Why track every expense?
                 
@@ -65,12 +71,12 @@ fun TipsScreen() {
             """.trimIndent(),
             icon = Icons.Default.Receipt,
             color = BudgetBruSecondary,
-            category = "Tracking"
+            category = "Budgeting"
         ),
         Tip(
             id = 3,
-            title = "Use Cash for Spending",  // Changed from "discretionary"
-            description = "Withdraw cash for entertainment to limit overspending.",
+            title = "Use Cash for Spending",
+            description = "Withdraw cash for entertainment to limit overspending",
             fullContent = """
                 The cash envelope method:
                 
@@ -87,12 +93,12 @@ fun TipsScreen() {
             """.trimIndent(),
             icon = Icons.Default.AttachMoney,
             color = Color(0xFF4CAF50),
-            category = "Spending Control"
+            category = "Saving"
         ),
         Tip(
             id = 4,
             title = "Automate Savings",
-            description = "Set up automatic transfers to savings on payday.",
+            description = "Set up automatic transfers to savings on payday",
             fullContent = """
                 Pay yourself first strategy:
                 
@@ -114,7 +120,7 @@ fun TipsScreen() {
         Tip(
             id = 5,
             title = "Review Subscriptions",
-            description = "Cancel unused subscriptions and memberships.",
+            description = "Cancel unused subscriptions and memberships",
             fullContent = """
                 Hidden subscription costs for students:
                 
@@ -139,7 +145,7 @@ fun TipsScreen() {
         Tip(
             id = 6,
             title = "Meal Prep",
-            description = "Plan meals to reduce food delivery and dining out costs.",
+            description = "Plan meals to reduce food delivery costs",
             fullContent = """
                 Student meal prep strategy:
                 
@@ -159,12 +165,37 @@ fun TipsScreen() {
             """.trimIndent(),
             icon = Icons.Default.Restaurant,
             color = Color(0xFF8BC34A),
-            category = "Food & Groceries"
+            category = "Cutting Costs"
         ),
         Tip(
             id = 7,
+            title = "Student Discounts",
+            description = "Always ask for student discounts everywhere",
+            fullContent = """
+                Student discounts you might miss:
+                
+                Software & Tech:
+                • Microsoft Office: Free with student email
+                • Adobe Creative Cloud: 60%+ off
+                • Spotify Premium: 50% off
+                • GitHub Student Pack: $200+ of free tools
+                
+                Local discounts:
+                • Museums and galleries: 50% off with student ID
+                • Movie theaters: R10-20 off tickets
+                • Public transport: Student fares
+                • Gym memberships: Student rates
+                
+                Always carry your student ID and ASK! You'd be surprised what's available.
+            """.trimIndent(),
+            icon = Icons.Default.School,
+            color = Color(0xFF9C27B0),
+            category = "Student Perks"
+        ),
+        Tip(
+            id = 8,
             title = "Emergency Fund",
-            description = "Save 3-6 months of expenses for emergencies.",
+            description = "Save 3-6 months of expenses for emergencies",
             fullContent = """
                 Why students need emergency funds:
                 
@@ -185,153 +216,113 @@ fun TipsScreen() {
             icon = Icons.Default.Security,
             color = Color(0xFF2196F3),
             category = "Emergency"
-        ),
-        Tip(
-            id = 8,
-            title = "Student Discounts",
-            description = "Always ask for student discounts on software, transport, and entertainment.",
-            fullContent = """
-                Student discounts you might miss:
-                
-                Software & Tech:
-                • Microsoft Office: Free with student email
-                • Adobe Creative Cloud: 60%+ off
-                • Spotify + Hulu: R50/month instead of R120
-                • Amazon Prime Student: 50% off + free delivery
-                • GitHub Student Pack: $200+ of free tools
-                
-                Local discounts:
-                • Museums and galleries: 50% off with student ID
-                • Movie theaters: R10-20 off tickets
-                • Public transport: Student fares
-                • Gym memberships: Student rates
-                • Phone plans: Student data bundles
-                
-                Always carry your student ID and ASK! You'd be surprised what's available.
-            """.trimIndent(),
-            icon = Icons.Default.School,
-            color = Color(0xFF9C27B0),
-            category = "Student Perks"
-        ),
-        Tip(
-            id = 9,
-            title = "Use Student Banking",
-            description = "Student accounts offer zero fees and other benefits.",
-            fullContent = """
-                Student banking benefits in South Africa:
-                
-                Features to look for:
-                • Zero monthly fees
-                • Free transactions
-                • Small overdraft facility (R500-1,000)
-                • Cashback on purchases
-                • Budgeting tools
-                
-                Banks to compare:
-                • Capitec: Low fees, good app
-                • FNB Student: eBucks rewards
-                • Standard Bank: Student-specific benefits
-                • ABSA: Zero fees on many transactions
-                • Nedbank: Savings bonuses
-                
-                Avoid: Credit cards with high interest, payday loans, store cards
-            """.trimIndent(),
-            icon = Icons.Default.AccountBalance,
-            color = Color(0xFF673AB7),
-            category = "Banking"
-        ),
-        Tip(
-            id = 10,
-            title = "Buy Secondhand",
-            description = "Textbooks, furniture, and electronics are much cheaper used.",
-            fullContent = """
-                Where to find student deals:
-                
-                Textbooks:
-                • Campus notice boards
-                • Facebook Marketplace
-                • Textbook exchange groups
-                • Previous year editions (usually 90% same content)
-                • Digital versions can be cheaper
-                
-                Furniture & Appliances:
-                • Students graduating sell everything cheap
-                • Look for end-of-semester sales (June, November)
-                • Check BBB (Bid or Buy) and Gumtree
-                • Freecycle groups for free items
-                
-                Electronics:
-                • Certified refurbished from reputable sellers
-                • Last year's model (saves 30-50%)
-                • Student discount on Apple Education Store
-                
-                One tip: Never buy new textbooks - you can save 50-70%!
-            """.trimIndent(),
-            icon = Icons.Default.ShoppingCart,
-            color = Color(0xFFE91E63),
-            category = "Smart Shopping"
         )
     )
 
-    Box(
+    // Filter tips
+    val filteredTips = allTips.filter { tip ->
+        (selectedCategory == "All" || tip.category == selectedCategory) &&
+                (searchQuery.isEmpty() || tip.title.contains(searchQuery, ignoreCase = true) ||
+                        tip.description.contains(searchQuery, ignoreCase = true))
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground)
     ) {
-        Column(
+        // Header
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(BudgetBruPrimary, BudgetBruSecondary, Color(0xFF6B21A5))
+                    ),
+                    shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
+                )
+                .padding(24.dp)
         ) {
-            // Header
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        brush = Brush.linearGradient(
-                            colors = listOf(BudgetBruPrimary, BudgetBruSecondary)
-                        ),
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                    .padding(24.dp)
-            ) {
-                Column {
-                    Text(
-                        "💰 Budgeting Tips",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        "${tips.size} expert tips to save money",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
+            Column {
+                Text(
+                    "💡 Budgeting Tips",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    "${filteredTips.size} expert tips to save money",
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
             }
+        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+        // Search Bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Search tips...", color = Color.White.copy(alpha = 0.5f)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = BudgetBruPrimary) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = BudgetBruPrimary,
+                focusedLabelColor = BudgetBruPrimary,
+                cursorColor = BudgetBruPrimary
+            )
+        )
 
-            // Tips List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(tips) { tip ->
-                    TipCard(
-                        tip = tip,
-                        onClick = { selectedTip = tip }
+        // Category Chips
+        LazyRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(categories) { category ->
+                FilterChip(
+                    selected = selectedCategory == category,
+                    onClick = { selectedCategory = category },
+                    label = {
+                        Text(
+                            category,
+                            fontWeight = if (selectedCategory == category) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = BudgetBruPrimary,
+                        selectedLabelColor = Color.White
                     )
-                }
-                item {
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Tips List
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(filteredTips) { tip ->
+                ModernTipCard(
+                    tip = tip,
+                    onClick = { selectedTip = tip }
+                )
+            }
+            item {
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
 
     // Tip Detail Dialog
     if (selectedTip != null) {
-        TipDetailDialog(
+        ModernTipDetailDialog(
             tip = selectedTip!!,
             onDismiss = { selectedTip = null }
         )
@@ -339,15 +330,15 @@ fun TipsScreen() {
 }
 
 @Composable
-fun TipCard(tip: Tip, onClick: () -> Unit) {
+fun ModernTipCard(tip: Tip, onClick: () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = DarkCard
-        ),
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -369,65 +360,65 @@ fun TipCard(tip: Tip, onClick: () -> Unit) {
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
+
             // Content
             Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        tip.title,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = tip.color
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = tip.color.copy(alpha = 0.15f)
-                    ) {
-                        Text(
-                            tip.category,
-                            fontSize = 10.sp,
-                            color = tip.color,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    tip.title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = tip.color
+                )
                 Text(
                     tip.description,
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                // Category badge
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = tip.color.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        tip.category,
+                        fontSize = 10.sp,
+                        color = tip.color,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
+
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = "View",
                 tint = tip.color,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(28.dp)
             )
         }
     }
 }
 
 @Composable
-fun TipDetailDialog(tip: Tip, onDismiss: () -> Unit) {
+fun ModernTipDetailDialog(tip: Tip, onDismiss: () -> Unit) {
     Dialog(
         onDismissRequest = onDismiss
     ) {
-        Surface(
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            shape = RoundedCornerShape(20.dp),
-            color = DarkCard
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header
                 Row(
@@ -435,7 +426,7 @@ fun TipDetailDialog(tip: Tip, onDismiss: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Surface(
-                        modifier = Modifier.size(50.dp),
+                        modifier = Modifier.size(60.dp),
                         shape = CircleShape,
                         color = tip.color.copy(alpha = 0.15f)
                     ) {
@@ -444,30 +435,33 @@ fun TipDetailDialog(tip: Tip, onDismiss: () -> Unit) {
                                 tip.icon,
                                 contentDescription = tip.title,
                                 tint = tip.color,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(30.dp)
                             )
                         }
                     }
                     Column {
                         Text(
                             tip.title,
-                            fontSize = 20.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = tip.color
                         )
-                        Text(
-                            tip.category,
-                            fontSize = 12.sp,
-                            color = tip.color.copy(alpha = 0.7f)
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = tip.color.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                tip.category,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = tip.color,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Divider(color = tip.color.copy(alpha = 0.3f))
-
-                Spacer(modifier = Modifier.height(16.dp))
+                Divider(color = tip.color.copy(alpha = 0.2f))
 
                 // Content
                 Text(
@@ -477,15 +471,16 @@ fun TipDetailDialog(tip: Tip, onDismiss: () -> Unit) {
                     lineHeight = 22.sp
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Close Button
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = tip.color)
                 ) {
-                    Text("Close", color = Color.White)
+                    Text("Got it! 💪", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

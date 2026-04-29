@@ -25,6 +25,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -39,7 +40,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"  // Updated to latest stable
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 }
 
@@ -48,39 +49,29 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
     implementation("androidx.activity:activity-compose:1.9.3")
 
-    // Compose BOM (manages versions for most Compose libraries)
-    implementation(platform("androidx.compose:compose-bom:2024.10.00"))  // Updated BOM
+    implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
-    implementation("io.coil-kt:coil-compose:2.5.0")
-    // Material Icons Extended - Version is managed by BOM, no version needed!
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.google.code.gson:gson:2.10.1")
-    // Remove this conflicting line:
-    // implementation("androidx.compose.material:material-icons-core:1.7.8")
 
-    // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.8.0")
-    implementation(libs.firebase.crashlytics.buildtools)  // Updated
+    implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // Room
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
     kapt("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
 
-    // Lifecycle & Coroutines
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-
-    // CameraX
-    implementation("androidx.camera:camera-core:1.4.0")  // Updated
-    implementation("androidx.camera:camera-camera2:1.4.0")  // Updated
-    implementation("androidx.camera:camera-lifecycle:1.4.0")  // Updated
-    implementation("androidx.camera:camera-view:1.4.0")  // Updated
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }
 
 kapt {
