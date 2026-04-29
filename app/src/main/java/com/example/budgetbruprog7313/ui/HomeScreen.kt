@@ -1,6 +1,5 @@
 package com.example.budgetbruprog7313.ui
 
-import android.app.TimePickerDialog
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -16,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
@@ -33,8 +33,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,6 +50,7 @@ import com.example.budgetbruprog7313.data.model.Transaction
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -163,42 +166,209 @@ fun FabSubItem(label: String, icon: ImageVector, visible: Boolean, delay: Int, o
     }
 }
 
-// ==================== TIME PICKER COMPONENT ====================
+// ==================== BASIC TIME INPUT FIELD ====================
 
 @Composable
-fun TimePickerField(
+fun BasicTimeField(
     label: String,
     time: String,
-    onTimeSelected: (String) -> Unit,
+    onTimeChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-
     OutlinedTextField(
         value = time,
-        onValueChange = { /* Read-only, use time picker */ },
+        onValueChange = { newValue ->
+            val filtered = newValue.filter { it.isDigit() || it == ':' }
+            if (filtered.length <= 5) {
+                onTimeChanged(filtered)
+            }
+        },
         label = { Text(label) },
         placeholder = { Text("HH:MM") },
-        readOnly = true,
-        trailingIcon = { Icon(Icons.Default.AccessTime, contentDescription = "Select Time") },
-        modifier = modifier.clickable {
-            val calendar = Calendar.getInstance()
-            val currentHour = if (time.isNotBlank()) time.split(":")[0].toInt() else calendar.get(Calendar.HOUR_OF_DAY)
-            val currentMinute = if (time.isNotBlank() && time.split(":").size > 1) time.split(":")[1].toInt() else calendar.get(Calendar.MINUTE)
-
-            TimePickerDialog(
-                context,
-                { _, hourOfDay, minute ->
-                    val formattedTime = String.format("%02d:%02d", hourOfDay, minute)
-                    onTimeSelected(formattedTime)
-                },
-                currentHour,
-                currentMinute,
-                true
-            ).show()
-        },
+        modifier = modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = RoundedCornerShape(12.dp)
     )
+}
+
+// ==================== DETAIL ITEM COMPONENT ====================
+
+@Composable
+fun DetailItem(label: String, value: String, color: Color) {
+    Column {
+        Text(label, fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
+        Text(value, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = color)
+    }
+}
+
+// ==================== EXPENSE DETAIL DIALOG ====================
+
+@Composable
+fun ExpenseDetailDialog(
+    expense: ExpenseEntry,
+    categories: List<com.example.budgetbruprog7313.data.model.Category>,
+    onUpdate: (ExpenseEntry) -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+    currentLocale: Locale
+) {
+    var isEditing by remember { mutableStateOf(false) }
+    var description by remember { mutableStateOf(expense.description) }
+    var amount by remember { mutableStateOf(expense.amount.toString()) }
+    var startTime by remember { mutableStateOf(expense.startTime) }
+    var endTime by remember { mutableStateOf(expense.endTime) }
+    var selectedCategoryId by remember { mutableStateOf(expense.categoryId) }
+    var showPhotoPreview by remember { mutableStateOf(false) }
+
+    val dateFormat = remember(currentLocale) { SimpleDateFormat("dd MMM yyyy", currentLocale) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        if (isEditing) "Edit Expense" else "Expense Details",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BudgetBruPrimary
+                    )
+                    IconButton(onClick = { if (isEditing) isEditing = false else onDismiss() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
+                    }
+                }
+
+                if (!isEditing) {
+                    DetailItem("Description", expense.description, BudgetBruPrimary)
+                    DetailItem("Amount", "R${String.format("%.2f", expense.amount)}", BudgetBruAccent)
+                    DetailItem("Start Time", expense.startTime, Color.White.copy(alpha = 0.8f))
+                    DetailItem("End Time", expense.endTime, Color.White.copy(alpha = 0.8f))
+                    DetailItem("Date", dateFormat.format(expense.date), Color.White.copy(alpha = 0.8f))
+                    DetailItem("Category", categories.find { it.id == expense.categoryId }?.name ?: "Unknown", BudgetBruSecondary)
+
+                    if (expense.photoPath != null && File(expense.photoPath).exists()) {
+                        Text("Receipt Photo", fontSize = 13.sp, color = BudgetBruSecondary)
+                        Spacer(Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier.size(100.dp).clip(RoundedCornerShape(8.dp)).clickable { showPhotoPreview = true }.background(DarkBackground)
+                        ) {
+                            val bitmap = File(expense.photoPath).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
+                            if (bitmap != null) {
+                                Image(bitmap = bitmap, contentDescription = "Receipt Photo", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { isEditing = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = BudgetBruPrimary)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            Spacer(Modifier.width(4.dp))
+                            Text("Edit")
+                        }
+                        OutlinedButton(
+                            onClick = onDelete,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = BudgetBruAccent)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            Spacer(Modifier.width(4.dp))
+                            Text("Delete")
+                        }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = amount,
+                        onValueChange = { amount = it },
+                        label = { Text("Amount (R) *") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Text("R") },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BasicTimeField(label = "Start Time", time = startTime, onTimeChanged = { startTime = it }, modifier = Modifier.weight(1f))
+                        BasicTimeField(label = "End Time", time = endTime, onTimeChanged = { endTime = it }, modifier = Modifier.weight(1f))
+                    }
+                    Text("Category *", fontSize = 13.sp, color = BudgetBruSecondary)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(categories) { category ->
+                            FilterChip(
+                                selected = selectedCategoryId == category.id,
+                                onClick = { selectedCategoryId = category.id },
+                                label = { Text(category.name) }
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(onClick = { isEditing = false }, modifier = Modifier.weight(1f)) { Text("Cancel") }
+                        Button(
+                            onClick = {
+                                val amt = amount.toDoubleOrNull()
+                                if (description.isNotBlank() && amt != null && selectedCategoryId != null && amt > 0) {
+                                    val updatedExpense = expense.copy(
+                                        description = description,
+                                        amount = amt,
+                                        startTime = startTime,
+                                        endTime = endTime,
+                                        categoryId = selectedCategoryId
+                                    )
+                                    onUpdate(updatedExpense)
+                                    onDismiss()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = BudgetBruPrimary)
+                        ) {
+                            Text("Save Changes")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showPhotoPreview && expense.photoPath != null && File(expense.photoPath).exists()) {
+        Dialog(onDismissRequest = { showPhotoPreview = false }) {
+            Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Receipt Photo", style = MaterialTheme.typography.titleMedium, color = BudgetBruPrimary)
+                    Spacer(Modifier.height(12.dp))
+                    val bitmap = File(expense.photoPath).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
+                    if (bitmap != null) {
+                        Image(bitmap = bitmap, contentDescription = "Receipt", modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Button(onClick = { showPhotoPreview = false }) { Text("Close") }
+                }
+            }
+        }
+    }
 }
 
 // ==================== MAIN HOME SCREEN ====================
@@ -222,9 +392,13 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
     var showAddExpenseDialog by remember { mutableStateOf(false) }
     var showAddIncomeDialog by remember { mutableStateOf(false) }
     var showScanReceiptSnackbar by remember { mutableStateOf(false) }
+    var selectedExpense by remember { mutableStateOf<ExpenseEntry?>(null) }
 
-    val dateFormatter = remember { SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()) }
-    val currentDate = remember { dateFormatter.format(Date()) }
+    val configuration = LocalConfiguration.current
+    val currentLocale = remember(configuration) { configuration.locales[0] ?: Locale.getDefault() }
+
+    val dateFormat = remember(currentLocale) { SimpleDateFormat("EEEE, dd MMMM yyyy", currentLocale) }
+    val currentDate = remember(dateFormat) { dateFormat.format(Date()) }
     val greeting = remember {
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
             in 0..11 -> "Good Morning"
@@ -283,7 +457,8 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                     }
                     Surface(shape = CircleShape, color = BudgetBruPrimary.copy(alpha = 0.2f), modifier = Modifier.size(36.dp)) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(SimpleDateFormat("dd", Locale.getDefault()).format(Date()), fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
+                            val dayFormat = remember(currentLocale) { SimpleDateFormat("dd", currentLocale) }
+                            Text(dayFormat.format(Date()), fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
                         }
                     }
                 }
@@ -339,7 +514,7 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                 TextButton(onClick = onViewAllClick) { Text("View All", color = BudgetBruPrimary) }
             }
 
-            // Recent Activity List
+            // Recent Activity List with click to show details
             if (isLoading) {
                 repeat(3) { ShimmerCard(); Spacer(Modifier.height(8.dp)) }
             } else if (recentActivity.isEmpty()) {
@@ -355,21 +530,33 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
             } else {
                 recentActivity.forEachIndexed { index, transaction ->
                     AnimatedExpenseItem(index) {
-                        TransactionCard(transaction, onDelete = {
-                            when (transaction) {
-                                is Transaction.Expense -> {
-                                    scope.launch {
-                                        repository.deleteExpenseById(transaction.id)
-                                        viewModel.refresh()
-                                        snackbarHostState.showSnackbar("Expense deleted")
+                        TransactionCard(
+                            transaction = transaction,
+                            onDelete = {
+                                when (transaction) {
+                                    is Transaction.Expense -> {
+                                        scope.launch {
+                                            repository.deleteExpenseById(transaction.id)
+                                            viewModel.refresh()
+                                            snackbarHostState.showSnackbar("Expense deleted")
+                                        }
+                                    }
+                                    is Transaction.Income -> {
+                                        viewModel.deleteIncome(transaction.id)
+                                        scope.launch { snackbarHostState.showSnackbar("Income deleted") }
                                     }
                                 }
-                                is Transaction.Income -> {
-                                    viewModel.deleteIncome(transaction.id)
-                                    scope.launch { snackbarHostState.showSnackbar("Income deleted") }
+                            },
+                            onClick = {
+                                if (transaction is Transaction.Expense) {
+                                    scope.launch {
+                                        val expenses = repository.getEntriesBetweenDates(Date(0), Date()).first()
+                                        selectedExpense = expenses.find { it.id == transaction.id }
+                                    }
                                 }
-                            }
-                        })
+                            },
+                            currentLocale = currentLocale
+                        )
                     }
                 }
             }
@@ -377,7 +564,7 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
         }
     }
 
-    // Delete Expense Dialog
+    // Delete Expense Confirmation Dialog
     if (showDeleteConfirmation && expenseToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false; expenseToDelete = null },
@@ -403,7 +590,7 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
         )
     }
 
-    // Add Expense Dialog with Time Picker and Camera
+    // Add Expense Dialog
     if (showAddExpenseDialog) {
         var customAmount by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
@@ -414,118 +601,57 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
         var showPhotoPreview by remember { mutableStateOf(false) }
 
         val context = LocalContext.current
-        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        val currentTime = remember(currentLocale) { SimpleDateFormat("HH:mm", currentLocale).format(Date()) }
 
-        val cameraLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.TakePicture()
-        ) { success ->
-            if (!success) {
-                photoPath = null
-            }
-        }
-
-        // Request camera permission
-        val cameraPermissionLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission()
-        ) { isGranted ->
-            if (!isGranted) {
-                scope.launch { snackbarHostState.showSnackbar("Camera permission is required to take photos") }
-            }
+        val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success -> if (!success) photoPath = null }
+        val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (!isGranted) scope.launch { snackbarHostState.showSnackbar("Camera permission required") }
         }
 
         AlertDialog(
             onDismissRequest = { showAddExpenseDialog = false },
             title = { Text("Add Expense", fontWeight = FontWeight.Bold, color = BudgetBruPrimary) },
             text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(max = 500.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Description *") },
-                        placeholder = { Text("e.g., Lunch, Uber, Coffee") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    OutlinedTextField(
-                        value = customAmount,
-                        onValueChange = { customAmount = it },
-                        label = { Text("Amount (R) *") },
-                        placeholder = { Text("e.g., 99.99") },
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingIcon = { Text("R") },
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    // Time pickers
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TimePickerField(
-                            label = "Start Time",
-                            time = startTime,
-                            onTimeSelected = { startTime = it },
-                            modifier = Modifier.weight(1f)
-                        )
-                        TimePickerField(
-                            label = "End Time",
-                            time = endTime,
-                            onTimeSelected = { endTime = it },
-                            modifier = Modifier.weight(1f)
-                        )
+                Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 500.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(description, onValueChange = { description = it }, label = { Text("Description *") }, placeholder = { Text("e.g., Lunch, Uber, Coffee") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(customAmount, onValueChange = { customAmount = it }, label = { Text("Amount (R) *") }, placeholder = { Text("e.g., 99.99") }, modifier = Modifier.fillMaxWidth(), leadingIcon = { Text("R") }, shape = RoundedCornerShape(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        BasicTimeField("Start Time", startTime, { startTime = it }, Modifier.weight(1f))
+                        BasicTimeField("End Time", endTime, { endTime = it }, Modifier.weight(1f))
                     }
-
                     Text("Category *", fontSize = 13.sp, color = BudgetBruSecondary)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(categories) { category ->
-                            FilterChip(
-                                selected = selectedCategoryId == category.id,
-                                onClick = { selectedCategoryId = category.id },
-                                label = { Text(category.name) }
-                            )
+                            FilterChip(selected = selectedCategoryId == category.id, onClick = { selectedCategoryId = category.id }, label = { Text(category.name) })
                         }
                     }
-
-                    // Photo Section
-                    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
-                        Column(modifier = Modifier.padding(12.dp)) {
+                    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+                        Column(Modifier.padding(12.dp)) {
                             Text("Optional Photo", fontSize = 13.sp, color = BudgetBruSecondary)
                             Spacer(Modifier.height(8.dp))
-
                             Button(
                                 onClick = {
                                     val permission = android.Manifest.permission.CAMERA
-                                    if (ContextCompat.checkSelfPermission(
-                                            context, permission
-                                        ) == PackageManager.PERMISSION_GRANTED
-                                    ) {
+                                    if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
                                         val result = CameraHelper.createImageFile(context)
                                         if (result != null) {
                                             val (file, uri) = result
                                             photoPath = file.absolutePath
                                             cameraLauncher.launch(uri)
-                                        } else {
-                                            scope.launch { snackbarHostState.showSnackbar("Failed to create image file") }
-                                        }
-                                    } else {
-                                        cameraPermissionLauncher.launch(permission)
-                                    }
+                                        } else scope.launch { snackbarHostState.showSnackbar("Failed to create image file") }
+                                    } else cameraPermissionLauncher.launch(permission)
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BudgetBruSecondary)
                             ) {
-                                Icon(Icons.Default.Camera, contentDescription = "Camera")
+                                Icon(Icons.Default.Camera, "Camera")
                                 Spacer(Modifier.width(4.dp))
                                 Text(if (photoPath != null) "Change Photo" else "Take Photo")
                             }
-
                             if (photoPath != null) {
                                 Spacer(Modifier.height(8.dp))
-                                Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)).clickable { showPhotoPreview = true }.background(DarkBackground)) {
+                                Box(Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)).clickable { showPhotoPreview = true }.background(DarkBackground)) {
                                     val bitmap = File(photoPath!!).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
-                                    if (bitmap != null) {
-                                        Image(bitmap = bitmap, contentDescription = "Receipt Photo", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                    }
+                                    if (bitmap != null) Image(bitmap = bitmap, contentDescription = "Receipt Photo", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                                 }
                             }
                         }
@@ -538,46 +664,29 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                         val amt = customAmount.toDoubleOrNull()
                         val finalStartTime = if (startTime.isBlank()) currentTime else startTime
                         val finalEndTime = if (endTime.isBlank()) currentTime else endTime
-
                         if (description.isNotBlank() && amt != null && selectedCategoryId != null && amt > 0) {
                             scope.launch {
-                                val now = Date()
-                                repository.addExpenseEntry(
-                                    date = now,
-                                    startTime = finalStartTime,
-                                    endTime = finalEndTime,
-                                    description = description,
-                                    amount = amt,
-                                    categoryId = selectedCategoryId!!,
-                                    photoPath = photoPath
-                                )
+                                repository.addExpenseEntry(Date(), finalStartTime, finalEndTime, description, amt, selectedCategoryId!!, photoPath)
                                 showAddExpenseDialog = false
                                 viewModel.refresh()
                                 snackbarHostState.showSnackbar("✅ Expense added!")
                             }
-                        } else {
-                            scope.launch { snackbarHostState.showSnackbar("Please fill all required fields (*)") }
-                        }
+                        } else scope.launch { snackbarHostState.showSnackbar("Please fill all required fields (*)") }
                     }
                 ) { Text("Save", color = BudgetBruPrimary) }
             },
-            dismissButton = {
-                TextButton(onClick = { showAddExpenseDialog = false }) { Text("Cancel") }
-            },
+            dismissButton = { TextButton({ showAddExpenseDialog = false }) { Text("Cancel") } },
             containerColor = DarkCard
         )
 
-        // Photo Preview Dialog
         if (showPhotoPreview && photoPath != null) {
             Dialog(onDismissRequest = { showPhotoPreview = false }) {
                 Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
-                    Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Receipt Photo", style = MaterialTheme.typography.titleMedium, color = BudgetBruPrimary)
                         Spacer(Modifier.height(12.dp))
                         val bitmap = File(photoPath!!).takeIf { it.exists() }?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
-                        if (bitmap != null) {
-                            Image(bitmap = bitmap, contentDescription = "Receipt", modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
-                        }
+                        if (bitmap != null) Image(bitmap = bitmap, contentDescription = "Receipt", modifier = Modifier.fillMaxWidth().height(300.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Fit)
                         Spacer(Modifier.height(12.dp))
                         Button(onClick = { showPhotoPreview = false }) { Text("Close") }
                     }
@@ -590,7 +699,6 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
     if (showAddIncomeDialog) {
         var incomeAmount by remember { mutableStateOf("") }
         var incomeDescription by remember { mutableStateOf("") }
-
         AlertDialog(
             onDismissRequest = { showAddIncomeDialog = false },
             title = { Text("Add Income", fontWeight = FontWeight.Bold, color = BudgetBruSecondary) },
@@ -613,16 +721,38 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                                 showAddIncomeDialog = false
                                 snackbarHostState.showSnackbar("✅ R${String.format("%.2f", amount)} added!")
                             }
-                        } else {
-                            scope.launch { snackbarHostState.showSnackbar("Please enter a valid amount") }
-                        }
+                        } else scope.launch { snackbarHostState.showSnackbar("Please enter a valid amount") }
                     }
                 ) { Text("Add Income", color = BudgetBruSecondary) }
             },
-            dismissButton = {
-                TextButton(onClick = { showAddIncomeDialog = false }) { Text("Cancel") }
-            },
+            dismissButton = { TextButton({ showAddIncomeDialog = false }) { Text("Cancel") } },
             containerColor = DarkCard
+        )
+    }
+
+    // Expense Detail Dialog
+    if (selectedExpense != null) {
+        ExpenseDetailDialog(
+            expense = selectedExpense!!,
+            categories = categories,
+            onUpdate = { updatedExpense ->
+                scope.launch {
+                    // Since there's no direct update method, we show a message
+                    snackbarHostState.showSnackbar("Edit functionality - Update would be saved here")
+                    viewModel.refresh()
+                }
+                selectedExpense = null
+            },
+            onDelete = {
+                scope.launch {
+                    repository.deleteExpense(selectedExpense!!)
+                    selectedExpense = null
+                    viewModel.refresh()
+                    snackbarHostState.showSnackbar("Expense deleted")
+                }
+            },
+            onDismiss = { selectedExpense = null },
+            currentLocale = currentLocale
         )
     }
 }
@@ -675,13 +805,8 @@ fun QuickAddChip(category: String, onClick: () -> Unit) {
 @Composable
 fun AnimatedExpenseItem(index: Int, content: @Composable () -> Unit) {
     var isVisible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        delay(index * 100L)
-        isVisible = true
-    }
-    AnimatedVisibility(visible = isVisible, enter = fadeIn(animationSpec = tween(300)) + slideInVertically(initialOffsetY = { it / 2 })) {
-        content()
-    }
+    LaunchedEffect(Unit) { delay(index * 100L); isVisible = true }
+    AnimatedVisibility(visible = isVisible, enter = fadeIn(animationSpec = tween(300)) + slideInVertically(initialOffsetY = { it / 2 })) { content() }
 }
 
 @Composable
@@ -700,7 +825,12 @@ fun ShimmerCard() {
 }
 
 @Composable
-fun TransactionCard(transaction: Transaction, onDelete: () -> Unit) {
+fun TransactionCard(
+    transaction: Transaction,
+    onDelete: () -> Unit,
+    onClick: () -> Unit,
+    currentLocale: Locale
+) {
     var showDeleteButton by remember { mutableStateOf(false) }
     val isExpense = transaction is Transaction.Expense
     val icon = if (isExpense) Icons.Default.Receipt else Icons.Default.AttachMoney
@@ -708,18 +838,23 @@ fun TransactionCard(transaction: Transaction, onDelete: () -> Unit) {
     val amountColor = if (isExpense) BudgetBruAccent else Color(0xFF4FC3F7)
     val amountPrefix = if (isExpense) "-R" else "+R"
 
-    Card(modifier = Modifier.fillMaxWidth().clickable { showDeleteButton = !showDeleteButton }, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard), elevation = CardDefaults.cardElevation(2.dp)) {
+    val dateTimeFormat = remember(currentLocale) { SimpleDateFormat("dd MMM yyyy • HH:mm", currentLocale) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
         Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = CircleShape, color = iconColor.copy(alpha = 0.15f), modifier = Modifier.size(48.dp)) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(icon, null, tint = iconColor, modifier = Modifier.size(24.dp))
-                    }
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(24.dp)) }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(transaction.description, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White)
-                    Text(SimpleDateFormat("dd MMM yyyy • HH:mm", Locale.getDefault()).format(transaction.date), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(dateTimeFormat.format(transaction.date), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (isExpense && (transaction as Transaction.Expense).categoryName.isNotBlank()) {
                         Text((transaction as Transaction.Expense).categoryName, style = MaterialTheme.typography.labelSmall, color = BudgetBruSecondary)
                     }
