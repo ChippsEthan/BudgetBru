@@ -36,7 +36,6 @@ import com.example.budgetbruprog7313.data.model.Transaction
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.theme.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -238,7 +237,6 @@ fun HomeScreen(
         label = "balance"
     )
 
-    // Show snackbar for scan receipt
     LaunchedEffect(showScanReceiptSnackbar) {
         if (showScanReceiptSnackbar) {
             snackbarHostState.showSnackbar("📷 Receipt scanning coming soon!")
@@ -306,18 +304,9 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.CalendarToday,
-                            contentDescription = "Date",
-                            tint = BudgetBruPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            currentDate,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Icon(Icons.Default.CalendarToday, "Date", tint = BudgetBruPrimary, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(currentDate, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Surface(
                         shape = CircleShape,
@@ -325,17 +314,13 @@ fun HomeScreen(
                         modifier = Modifier.size(36.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                SimpleDateFormat("dd", Locale.getDefault()).format(Date()),
-                                fontWeight = FontWeight.Bold,
-                                color = BudgetBruPrimary
-                            )
+                            Text(SimpleDateFormat("dd", Locale.getDefault()).format(Date()), fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
                         }
                     }
                 }
             }
 
-            // Balance Card with Gradient
+            // Balance Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(28.dp),
@@ -343,71 +328,33 @@ fun HomeScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    BudgetBruPrimary,
-                                    BudgetBruSecondary,
-                                    Color(0xFF6B21A5)
-                                )
-                            )
+                    modifier = Modifier.fillMaxSize().background(
+                        Brush.horizontalGradient(
+                            colors = listOf(BudgetBruPrimary, BudgetBruSecondary, Color(0xFF6B21A5))
                         )
-                        .padding(24.dp)
+                    ).padding(24.dp)
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "Available Balance",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.9f),
-                            letterSpacing = 1.5.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "R ${String.format("%,.2f", animatedBalance)}",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 48.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            BalanceMiniStat(
-                                title = "Total Spent",
-                                value = "R ${String.format("%,.2f", totalSpent)}",
-                                color = Color(0xFFFF6B6B)
-                            )
-                            BalanceMiniStat(
-                                title = "Remaining",
-                                value = "R ${String.format("%,.2f", availableBalance)}",
-                                color = Color(0xFF4ECDC4)
-                            )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                        Text("Available Balance", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f), letterSpacing = 1.5.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Text("R ${String.format("%,.2f", animatedBalance)}", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 48.sp)
+                        Spacer(Modifier.height(16.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            BalanceMiniStat("Total Spent", "R ${String.format("%,.2f", totalSpent)}", Color(0xFFFF6B6B))
+                            BalanceMiniStat("Remaining", "R ${String.format("%,.2f", availableBalance)}", Color(0xFF4ECDC4))
                         }
                     }
                 }
             }
 
-            // Quick Stats Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            // Stats Row
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 QuickStatCard(
                     title = "Monthly Spent",
                     value = "R ${String.format("%,.2f", totalSpent)}",
                     icon = Icons.AutoMirrored.Filled.TrendingDown,
                     color = BudgetBruAccent,
-                    percentage = if (availableBalance + totalSpent > 0)
-                        (totalSpent / (availableBalance + totalSpent) * 100).toInt() else 0,
+                    percentage = if (availableBalance + totalSpent > 0) (totalSpent / (availableBalance + totalSpent) * 100).toInt() else 0,
                     modifier = Modifier.weight(1f)
                 )
                 QuickStatCard(
@@ -421,99 +368,49 @@ fun HomeScreen(
             }
 
             // Quick Add Section
-            Text(
-                "Quick Add Expense",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Text("Quick Add Expense", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
 
-            // Amount selector chips
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 8.dp)
-            ) {
+            // Amount chips
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                 items(listOf(20.0, 50.0, 100.0, 200.0, 500.0)) { amount ->
                     FilterChip(
                         selected = selectedQuickAmount == amount,
                         onClick = { selectedQuickAmount = amount },
                         label = { Text("R${amount.toInt()}") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = BudgetBruPrimary,
-                            selectedLabelColor = Color.White
-                        )
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BudgetBruPrimary, selectedLabelColor = Color.White)
                     )
                 }
             }
 
             // Category chips
             if (categories.isNotEmpty()) {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
-                ) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) {
                     items(categories.take(8)) { category ->
-                        QuickAddChip(
-                            category = category.name,
-                            onClick = {
-                                viewModel.addQuickExpense(selectedQuickAmount, "Quick ${category.name}", category.id)
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        "R${selectedQuickAmount.toInt()} added for ${category.name}"
-                                    )
-                                }
-                            }
-                        )
+                        QuickAddChip(category.name, onClick = {
+                            viewModel.addQuickExpense(selectedQuickAmount, "Quick ${category.name}", category.id)
+                            scope.launch { snackbarHostState.showSnackbar("R${selectedQuickAmount.toInt()} added for ${category.name}") }
+                        })
                     }
                 }
             }
 
             // Recent Activity Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Recent Activity",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                TextButton(onClick = onViewAllClick) {
-                    Text("View All", color = BudgetBruPrimary)
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Recent Activity", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                TextButton(onClick = onViewAllClick) { Text("View All", color = BudgetBruPrimary) }
             }
 
-            // Recent Activity List (shows both expenses AND income)
+            // Recent Activity List
             if (isLoading) {
-                repeat(3) {
-                    ShimmerCard()
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                repeat(3) { ShimmerCard(); Spacer(Modifier.height(8.dp)) }
             } else if (recentActivity.isEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkCard),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.Receipt,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = BudgetBruPrimary.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                Card(Modifier.fillMaxWidth().padding(vertical = 8.dp), colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(16.dp)) {
+                    Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Receipt, null, Modifier.size(64.dp), tint = BudgetBruPrimary.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(16.dp))
                         Text("No activity yet", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Tap the + button to add expenses or income",
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text("Tap the + button to add expenses or income", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -532,9 +429,7 @@ fun HomeScreen(
                                     }
                                     is Transaction.Income -> {
                                         viewModel.deleteIncome(transaction.id)
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("Income deleted")
-                                        }
+                                        scope.launch { snackbarHostState.showSnackbar("Income deleted") }
                                     }
                                 }
                             }
@@ -543,59 +438,35 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 
-    // Delete Expense Confirmation Dialog
+    // Delete Expense Dialog
     if (showDeleteConfirmation && expenseToDelete != null) {
         AlertDialog(
-            onDismissRequest = {
-                showDeleteConfirmation = false
-                expenseToDelete = null
-            },
-            title = {
-                Text(
-                    "Delete Expense",
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruAccent
-                )
-            },
-            text = {
-                Text("Are you sure you want to delete \"${expenseToDelete?.description}\" for R${String.format("%.2f", expenseToDelete?.amount ?: 0.0)}?")
-            },
+            onDismissRequest = { showDeleteConfirmation = false; expenseToDelete = null },
+            title = { Text("Delete Expense", fontWeight = FontWeight.Bold, color = BudgetBruAccent) },
+            text = { Text("Delete \"${expenseToDelete?.description}\" for R${String.format("%.2f", expenseToDelete?.amount ?: 0.0)}?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         expenseToDelete?.let { expense ->
                             scope.launch {
-                                try {
-                                    repository.deleteExpense(expense)
-                                    showDeleteConfirmation = false
-                                    expenseToDelete = null
-                                    viewModel.refresh()
-                                    snackbarHostState.showSnackbar("Expense deleted successfully")
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar("Error deleting expense: ${e.message}")
-                                }
+                                repository.deleteExpense(expense)
+                                showDeleteConfirmation = false
+                                expenseToDelete = null
+                                viewModel.refresh()
+                                snackbarHostState.showSnackbar("Expense deleted")
                             }
                         }
                     }
-                ) {
-                    Text("Delete", color = BudgetBruAccent)
-                }
+                ) { Text("Delete", color = BudgetBruAccent) }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showDeleteConfirmation = false
-                    expenseToDelete = null
-                }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDeleteConfirmation = false; expenseToDelete = null }) { Text("Cancel") }
             },
-            containerColor = DarkCard,
-            titleContentColor = BudgetBruAccent,
-            textContentColor = Color.White
+            containerColor = DarkCard
         )
     }
 
@@ -610,29 +481,12 @@ fun HomeScreen(
             title = { Text("Add Expense", fontWeight = FontWeight.Bold, color = BudgetBruPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Description") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value = customAmount,
-                        onValueChange = { customAmount = it },
-                        label = { Text("Amount (R)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingIcon = { Text("R") },
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    OutlinedTextField(description, onValueChange = { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(customAmount, onValueChange = { customAmount = it }, label = { Text("Amount (R)") }, modifier = Modifier.fillMaxWidth(), leadingIcon = { Text("R") }, shape = RoundedCornerShape(12.dp))
                     Text("Category", fontSize = 13.sp, color = BudgetBruSecondary)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(categories) { category ->
-                            FilterChip(
-                                selected = selectedCategoryId == category.id,
-                                onClick = { selectedCategoryId = category.id },
-                                label = { Text(category.name) }
-                            )
+                            FilterChip(selected = selectedCategoryId == category.id, onClick = { selectedCategoryId = category.id }, label = { Text(category.name) })
                         }
                     }
                 }
@@ -648,19 +502,13 @@ fun HomeScreen(
                                 snackbarHostState.showSnackbar("Expense added!")
                             }
                         } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Please fill all fields")
-                            }
+                            scope.launch { snackbarHostState.showSnackbar("Please fill all fields") }
                         }
                     }
-                ) {
-                    Text("Save", color = BudgetBruPrimary)
-                }
+                ) { Text("Save", color = BudgetBruPrimary) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddExpenseDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showAddExpenseDialog = false }) { Text("Cancel") }
             },
             containerColor = DarkCard
         )
@@ -676,29 +524,10 @@ fun HomeScreen(
             title = { Text("Add Income", fontWeight = FontWeight.Bold, color = BudgetBruSecondary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Add money to your budget",
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = incomeAmount,
-                        onValueChange = { incomeAmount = it },
-                        label = { Text("Income Amount (R)") },
-                        placeholder = { Text("e.g., 5000") },
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingIcon = { Text("R") },
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value = incomeDescription,
-                        onValueChange = { incomeDescription = it },
-                        label = { Text("Description (Optional)") },
-                        placeholder = { Text("e.g., Salary, Freelance, Gift") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    Text("Add money to your budget", fontSize = 13.sp, color = Color.White.copy(alpha = 0.7f))
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedTextField(incomeAmount, onValueChange = { incomeAmount = it }, label = { Text("Income Amount (R)") }, placeholder = { Text("e.g., 5000") }, modifier = Modifier.fillMaxWidth(), leadingIcon = { Text("R") }, shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(incomeDescription, onValueChange = { incomeDescription = it }, label = { Text("Description (Optional)") }, placeholder = { Text("e.g., Salary, Freelance, Gift") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
                 }
             },
             confirmButton = {
@@ -707,29 +536,19 @@ fun HomeScreen(
                         val amount = incomeAmount.toDoubleOrNull()
                         if (amount != null && amount > 0) {
                             scope.launch {
-                                try {
-                                    val description = if (incomeDescription.isNotBlank()) incomeDescription else "Income Added"
-                                    viewModel.addIncome(amount, description)
-                                    showAddIncomeDialog = false
-                                    snackbarHostState.showSnackbar("✅ R${String.format("%.2f", amount)} added!")
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar("Error: ${e.message}")
-                                }
+                                val desc = if (incomeDescription.isNotBlank()) incomeDescription else "Income Added"
+                                viewModel.addIncome(amount, desc)
+                                showAddIncomeDialog = false
+                                snackbarHostState.showSnackbar("✅ R${String.format("%.2f", amount)} added!")
                             }
                         } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Please enter a valid amount")
-                            }
+                            scope.launch { snackbarHostState.showSnackbar("Please enter a valid amount") }
                         }
                     }
-                ) {
-                    Text("Add Income", color = BudgetBruSecondary)
-                }
+                ) { Text("Add Income", color = BudgetBruSecondary) }
             },
             dismissButton = {
-                TextButton(onClick = { showAddIncomeDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showAddIncomeDialog = false }) { Text("Cancel") }
             },
             containerColor = DarkCard
         )
@@ -742,74 +561,28 @@ fun HomeScreen(
 fun BalanceMiniStat(title: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(title, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
-        Text(
-            value,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }
 
 @Composable
-fun QuickStatCard(
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
-    percentage: Int,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.height(110.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard)
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+fun QuickStatCard(title: String, value: String, icon: ImageVector, color: Color, percentage: Int, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.height(110.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodySmall)
-                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
             }
-            Text(
-                value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = color,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            LinearProgressIndicator(
-                progress = { percentage / 100f },
-                modifier = Modifier.fillMaxWidth().height(4.dp),
-                color = color,
-                trackColor = Color.Gray.copy(alpha = 0.3f)
-            )
+            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            LinearProgressIndicator(progress = { percentage / 100f }, modifier = Modifier.fillMaxWidth().height(4.dp), color = color, trackColor = Color.Gray.copy(alpha = 0.3f))
         }
     }
 }
 
 @Composable
 fun QuickAddChip(category: String, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .width(90.dp)
-            .height(70.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
+    Card(modifier = Modifier.width(90.dp).height(70.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(
                 when (category.lowercase()) {
                     "food" -> Icons.Default.Restaurant
@@ -819,70 +592,36 @@ fun QuickAddChip(category: String, onClick: () -> Unit) {
                     "study" -> Icons.Default.School
                     "bills" -> Icons.Default.Receipt
                     else -> Icons.Default.Category
-                },
-                contentDescription = null,
-                tint = BudgetBruPrimary,
-                modifier = Modifier.size(24.dp)
+                }, null, tint = BudgetBruPrimary, modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = category,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Spacer(Modifier.height(4.dp))
+            Text(category, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @Composable
 fun AnimatedExpenseItem(index: Int, content: @Composable () -> Unit) {
-    val delayMillis = index * 100L
     var isVisible by remember { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
-        delay(delayMillis)
+        delay(index * 100L)
         isVisible = true
     }
-
-    AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(animationSpec = tween(300)) + slideInVertically(initialOffsetY = { it / 2 })
-    ) {
+    AnimatedVisibility(visible = isVisible, enter = fadeIn(animationSpec = tween(300)) + slideInVertically(initialOffsetY = { it / 2 })) {
         content()
     }
 }
 
 @Composable
 fun ShimmerCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth().height(80.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = Color.Gray.copy(alpha = 0.2f),
-                modifier = Modifier.size(48.dp)
-            ) {}
-            Spacer(modifier = Modifier.width(12.dp))
+    Card(modifier = Modifier.fillMaxWidth().height(80.dp), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = Color.Gray.copy(alpha = 0.2f), modifier = Modifier.size(48.dp)) {}
+            Spacer(Modifier.width(12.dp))
             Column {
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color.Gray.copy(alpha = 0.2f),
-                    modifier = Modifier.width(150.dp).height(16.dp)
-                ) {}
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = Color.Gray.copy(alpha = 0.2f),
-                    modifier = Modifier.width(100.dp).height(12.dp)
-                ) {}
+                Surface(modifier = Modifier.width(150.dp).height(16.dp), color = Color.Gray.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {}
+                Spacer(Modifier.height(8.dp))
+                Surface(modifier = Modifier.width(80.dp).height(12.dp), color = Color.Gray.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {}
             }
         }
     }
@@ -891,142 +630,87 @@ fun ShimmerCard() {
 // ==================== TRANSACTION CARD ====================
 
 @Composable
-fun TransactionCard(
-    transaction: Transaction,
-    onDelete: () -> Unit
-) {
+fun TransactionCard(transaction: Transaction, onDelete: () -> Unit) {
     var showDeleteButton by remember { mutableStateOf(false) }
-
     val isExpense = transaction is Transaction.Expense
     val icon = if (isExpense) Icons.Default.Receipt else Icons.Default.AttachMoney
-    // Light blue for income, red for expense
-    val iconColor = if (isExpense) BudgetBruAccent else Color(0xFF4FC3F7)  // Light blue
-    val amountColor = if (isExpense) BudgetBruAccent else Color(0xFF4FC3F7)  // Light blue
+    val iconColor = if (isExpense) BudgetBruAccent else Color(0xFF4FC3F7)
+    val amountColor = if (isExpense) BudgetBruAccent else Color(0xFF4FC3F7)
     val amountPrefix = if (isExpense) "-R" else "+R"
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { showDeleteButton = !showDeleteButton },
+        modifier = Modifier.fillMaxWidth().clickable { showDeleteButton = !showDeleteButton },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = DarkCard),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left side: Icon + Description + Date + Category
-            Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // Left side
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = CircleShape,
                     color = iconColor.copy(alpha = 0.15f),
                     modifier = Modifier.size(48.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             icon,
-                            contentDescription = null,
+                            null,
                             tint = iconColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = transaction.description,
+                        transaction.description,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = Color.White
                     )
                     Text(
-                        text = SimpleDateFormat("dd MMM yyyy • HH:mm", Locale.getDefault()).format(transaction.date),
+                        SimpleDateFormat("dd MMM yyyy • HH:mm", Locale.getDefault()).format(
+                            transaction.date
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (isExpense && (transaction as Transaction.Expense).categoryName.isNotBlank()) {
                         Text(
-                            text = (transaction as Transaction.Expense).categoryName,
+                            (transaction as Transaction.Expense).categoryName,
                             style = MaterialTheme.typography.labelSmall,
                             color = BudgetBruSecondary
                         )
                     }
                 }
             }
-
-            // Right side: Delete button OR Amount (only one, not both)
+            // Right side
             if (showDeleteButton) {
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        "Delete",
                         tint = BudgetBruAccent
                     )
                 }
             } else {
                 Text(
-                    text = "$amountPrefix${String.format("%,.2f", transaction.amount)}",
+                    "$amountPrefix${String.format("%,.2f", transaction.amount)}",
                     color = amountColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
             }
-                }
-            }
-
-            AnimatedVisibility(
-                visible = showDeleteButton,
-                enter = fadeIn() + slideInHorizontally(),
-                exit = fadeOut() + slideOutHorizontally()
-            ) {
-                Row {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = BudgetBruAccent
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-            }
-
-            Text(
-                text = "$amountPrefix${String.format("%,.2f", transaction.amount)}",
-                color = amountColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-                        )
-
-
-            AnimatedVisibility(
-                visible = showDeleteButton,
-                enter = fadeIn() + slideInHorizontally(),
-                exit = fadeOut() + slideOutHorizontally()
-            ) {
-                Row {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = BudgetBruAccent
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-            }
-
-            Text(
-                text = "$amountPrefix${String.format("%,.2f", transaction.amount)}",
-                color = amountColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
         }
+    }
 
+}
