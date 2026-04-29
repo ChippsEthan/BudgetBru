@@ -17,7 +17,6 @@
         android:theme="@style/Theme.BudgetBru"
         android:requestLegacyExternalStorage="true">
 
-        <!-- Main Launcher Activity -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
