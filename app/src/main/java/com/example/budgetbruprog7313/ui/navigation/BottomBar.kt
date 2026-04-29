@@ -7,7 +7,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.budgetbruprog7313.ui.Screen   // Make sure this import works
+import com.example.budgetbruprog7313.ui.Screen
 
 @Composable
 fun BudgetBruBottomBar(navController: NavController) {
@@ -15,6 +15,7 @@ fun BudgetBruBottomBar(navController: NavController) {
         Screen.Home,
         Screen.Expenses,
         Screen.Goals,
+        Screen.ManageCategories, // Added Categories screen
         Screen.IOU,
         Screen.Tips
     )

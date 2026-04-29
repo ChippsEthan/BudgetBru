@@ -21,8 +21,8 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     repository: BudgetRepository
 ) {
-    var username by remember { mutableStateOf("test") }     // Pre-filled for easy testing
-    var password by remember { mutableStateOf("1234") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -74,7 +74,8 @@ fun LoginScreen(
                     onValueChange = { username = it },
                     label = { Text("Username") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    enabled = !isLoading
                 )
 
                 OutlinedTextField(
@@ -83,11 +84,16 @@ fun LoginScreen(
                     label = { Text("Password") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
+                    visualTransformation = PasswordVisualTransformation(),
+                    enabled = !isLoading
                 )
 
-                errorMessage?.let {
-                    Text(text = it, color = MaterialTheme.colorScheme.error)
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 14.sp
+                    )
                 }
 
                 Button(
@@ -101,13 +107,19 @@ fun LoginScreen(
                         errorMessage = null
 
                         scope.launch {
-                            val user = repository.login(username.trim(), password.trim())
-                            isLoading = false
-
-                            if (user != null) {
-                                onLoginSuccess()
-                            } else {
-                                errorMessage = "Invalid credentials.\nTry: test / 1234"
+                            try {
+                                val user = repository.login(username.trim(), password.trim())
+                                if (user != null) {
+                                    // Small delay to ensure state updates properly
+                                    kotlinx.coroutines.delay(100)
+                                    onLoginSuccess()
+                                } else {
+                                    errorMessage = "Invalid credentials.\nTry: test / 1234"
+                                    isLoading = false
+                                }
+                            } catch (e: Exception) {
+                                errorMessage = "Login error: ${e.message}"
+                                isLoading = false
                             }
                         }
                     },

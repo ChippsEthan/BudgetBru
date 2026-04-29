@@ -73,6 +73,7 @@ dependencies {
     // Lifecycle & Coroutines
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 
     // CameraX
     implementation("androidx.camera:camera-core:1.4.0")  // Updated

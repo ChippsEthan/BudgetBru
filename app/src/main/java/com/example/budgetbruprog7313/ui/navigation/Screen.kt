@@ -10,10 +10,10 @@ sealed class Screen(
     val title: String,
     val icon: ImageVector
 ) {
-    data object Home     : Screen("home",     "Home",     Default.Home)
+    data object Home : Screen("home", "Home", Default.Home)
     data object Expenses : Screen("expenses", "Expenses", Default.List)
-
     data object Goals : Screen("goals", "Goals", Icons.Default.Flag)
-    data object IOU      : Screen("iou",      "IOU",      Default.Person)
-    data object Tips     : Screen("tips",     "Tips",     Default.Info)
+    data object IOU : Screen("iou", "IOU", Default.Person)
+    data object Tips : Screen("tips", "Tips", Default.Info)
+    data object ManageCategories : Screen("manage_categories", "Categories", Default.Category)
 }
