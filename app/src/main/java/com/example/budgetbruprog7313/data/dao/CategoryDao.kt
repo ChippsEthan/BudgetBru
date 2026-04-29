@@ -15,9 +15,9 @@ interface CategoryDao {
     @Query("SELECT * FROM categories ORDER BY name ASC")
     suspend fun getAllCategoriesList(): List<Category>
 
-    // Insert a new category
+    // Insert a new category - Returns the row ID
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCategory(category: Category)
+    suspend fun insertCategory(category: Category): Long  // Changed from Unit to Long
 
     // Delete a category
     @Delete

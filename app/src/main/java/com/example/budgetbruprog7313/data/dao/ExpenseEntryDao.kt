@@ -8,7 +8,7 @@ import java.util.Date
 @Dao
 interface ExpenseEntryDao {
     @Insert
-    suspend fun insertEntry(entry: ExpenseEntry): Long
+    suspend fun insertEntry(entry: ExpenseEntry): Long  // Returns the row ID
 
     @Delete
     suspend fun deleteEntry(entry: ExpenseEntry)

@@ -13,17 +13,24 @@ object CameraHelper {
 
     private const val AUTHORITY_SUFFIX = ".fileprovider"
 
-    fun createImageFile(context: Context): Pair<File, Uri> {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val imageDir = File(context.filesDir, "expense_photos")
-        if (!imageDir.exists()) imageDir.mkdirs()
-        val imageFile = File(imageDir, "EXPENSE_${timeStamp}.jpg")
-        val uri = FileProvider.getUriForFile(
-            context,
-            context.packageName + AUTHORITY_SUFFIX,
-            imageFile
-        )
-        return Pair(imageFile, uri)
+    fun createImageFile(context: Context): Pair<File, Uri>? {
+        return try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val imageDir = File(context.filesDir, "expense_photos")
+            if (!imageDir.exists()) {
+                imageDir.mkdirs()
+            }
+            val imageFile = File(imageDir, "EXPENSE_${timeStamp}.jpg")
+            val uri = FileProvider.getUriForFile(
+                context,
+                context.packageName + AUTHORITY_SUFFIX,
+                imageFile
+            )
+            Pair(imageFile, uri)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
     fun getTakePhotoIntent(photoUri: Uri): Intent {

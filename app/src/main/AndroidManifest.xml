@@ -2,32 +2,33 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.budgetbruprog7313">
 
+    <!-- Camera and Storage Permissions -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
         android:label="BudgetBru"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BudgetBru">
+        android:theme="@style/Theme.BudgetBru"
+        android:requestLegacyExternalStorage="true">
 
         <!-- Main Launcher Activity -->
         <activity
             android:name=".ui.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Keep old activities but remove launcher from them -->
-        <activity android:name=".ui.LoginActivity" />
-        <activity android:name=".ui.AddExpenseActivity" />
-        <activity android:name=".ui.ExpenseListActivity" />
-        <activity android:name=".ui.PeriodReportActivity" />
-        <activity android:name=".ui.GoalsActivity" />
-
+        <!-- File Provider for Camera Photos -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -35,7 +36,9 @@
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
+                android:resource="@xml/fileprovider" />
         </provider>
+
     </application>
+
 </manifest>

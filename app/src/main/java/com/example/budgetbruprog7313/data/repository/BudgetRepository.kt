@@ -23,8 +23,10 @@ class BudgetRepository(private val db: AppDatabase) {
 
     // ==================== USER METHODS ====================
 
-    suspend fun login(username: String, password: String): User? =
-        userDao.login(username, password)
+    suspend fun login(username: String, password: String): User? {
+        Log.d(TAG, "Login attempt for user: $username")
+        return userDao.login(username, password)
+    }
 
     suspend fun register(username: String, password: String): Result<Unit> {
         val existing = userDao.getUserByUsername(username)
@@ -33,39 +35,40 @@ class BudgetRepository(private val db: AppDatabase) {
         return Result.success(Unit)
     }
 
-    suspend fun deleteExpense(expense: ExpenseEntry) {
-        entryDao.deleteEntry(expense)
-    }
-
-    suspend fun deleteExpenseById(id: Long) {
-        entryDao.deleteEntryById(id)
-    }
-
     // ==================== CATEGORY METHODS ====================
 
     val allCategories: Flow<List<Category>> = categoryDao.getAllCategories()
 
     suspend fun getAllCategoriesList(): List<Category> = categoryDao.getAllCategoriesList()
 
-    suspend fun addCategory(name: String) =
-        categoryDao.insertCategory(Category(name = name))
+    suspend fun addCategory(name: String): Long {
+        Log.d(TAG, "Adding category: $name")
+        return categoryDao.insertCategory(Category(name = name))
+    }
 
-    suspend fun deleteCategory(category: Category) =
+    suspend fun deleteCategory(category: Category) {
+        Log.d(TAG, "Deleting category: ${category.name}")
         categoryDao.deleteCategory(category)
+    }
 
     // ==================== EXPENSE METHODS ====================
 
-    fun getEntriesBetweenDates(start: Date, end: Date): Flow<List<ExpenseEntry>> =
-        entryDao.getEntriesBetweenDates(start, end)
+    fun getEntriesBetweenDates(start: Date, end: Date): Flow<List<ExpenseEntry>> {
+        Log.d(TAG, "Getting expenses between $start and $end")
+        return entryDao.getEntriesBetweenDates(start, end)
+    }
 
-    fun getCategorySpending(start: Date, end: Date): Flow<List<ExpenseEntryDao.CategorySpending>> =
-        entryDao.getCategorySpendingBetweenDates(start, end)
+    fun getCategorySpending(start: Date, end: Date): Flow<List<ExpenseEntryDao.CategorySpending>> {
+        Log.d(TAG, "Getting category spending between $start and $end")
+        return entryDao.getCategorySpendingBetweenDates(start, end)
+    }
 
     suspend fun addExpenseEntry(
         date: Date, startTime: String, endTime: String,
         description: String, amount: Double, categoryId: Long, photoPath: String?
-    ) {
-        entryDao.insertEntry(
+    ): Long {
+        Log.d(TAG, "Adding expense: $description - R$amount")
+        return entryDao.insertEntry(
             ExpenseEntry(
                 date = date, startTime = startTime, endTime = endTime,
                 description = description, amount = amount,
@@ -74,52 +77,63 @@ class BudgetRepository(private val db: AppDatabase) {
         )
     }
 
+    suspend fun deleteExpense(expense: ExpenseEntry) {
+        Log.d(TAG, "Deleting expense: ${expense.description}")
+        entryDao.deleteEntry(expense)
+    }
+
+    suspend fun deleteExpenseById(id: Long) {
+        Log.d(TAG, "Deleting expense by ID: $id")
+        entryDao.deleteEntryById(id)
+    }
+
     // ==================== SETTINGS METHODS ====================
 
-    // Goals (Min/Max)
-    suspend fun saveGoals(min: Double, max: Double) {
-        try {
-            Log.d(TAG, "saveGoals called with min=$min, max=$max")
-            val currentSettings = settingsDao.getSettingsSync()
-            Log.d(TAG, "Current settings: $currentSettings")
 
-            if (currentSettings != null) {
-                val updatedSettings = currentSettings.copy(
-                    minMonthlyGoal = min,
-                    maxMonthlyGoal = max
-                )
-                settingsDao.updateSettings(updatedSettings)
-                Log.d(TAG, "Updated existing settings: $updatedSettings")
-            } else {
-                val newSettings = Settings(
-                    minMonthlyGoal = min,
-                    maxMonthlyGoal = max,
-                    monthlyIncome = 5000.0
-                )
-                val id = settingsDao.saveSettings(newSettings)
-                Log.d(TAG, "Created new settings with ID: $id, settings: $newSettings")
-            }
-
-            // Verify save
-            val verify = settingsDao.getSettingsSync()
-            Log.d(TAG, "Verification after save: $verify")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error saving goals: ${e.message}", e)
-            throw e
-        }
-    }
 
     fun getGoals(): Flow<Settings?> {
         Log.d(TAG, "getGoals called")
         return settingsDao.getSettings()
     }
+    // Replace the saveGoals method in BudgetRepository.kt
+    suspend fun saveGoals(min: Double, max: Double) {
+        try {
+            Log.d(TAG, "saveGoals called with min=$min, max=$max")
+            val currentSettings = settingsDao.getSettingsSync()
+            Log.d(TAG, "Current settings before save: $currentSettings")
 
-    // Monthly Income
+            if (currentSettings != null) {
+                // Update existing settings - preserve the ID
+                val updatedSettings = currentSettings.copy(
+                    minMonthlyGoal = min,
+                    maxMonthlyGoal = max
+                )
+                settingsDao.updateSettings(updatedSettings)
+                Log.d(TAG, "Updated existing settings (ID: ${currentSettings.id}): min=$min, max=$max")
+            } else {
+                // Create new settings - let Room generate ID
+                val newSettings = Settings(
+                    minMonthlyGoal = min,
+                    maxMonthlyGoal = max,
+                    monthlyIncome = 5000.0
+                )
+                val newId = settingsDao.saveSettings(newSettings)
+                Log.d(TAG, "Created new settings with ID: $newId, min=$min, max=$max")
+            }
+
+            // Verify save
+            val verifySettings = settingsDao.getSettingsSync()
+            Log.d(TAG, "Verification after save: ${verifySettings?.minMonthlyGoal}, ${verifySettings?.maxMonthlyGoal}")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error saving goals: ${e.message}", e)
+            throw e
+        }
+    }
     suspend fun saveMonthlyIncome(income: Double) {
         try {
             Log.d(TAG, "saveMonthlyIncome called with income=$income")
             val currentSettings = settingsDao.getSettingsSync()
-            Log.d(TAG, "Current settings: $currentSettings")
 
             if (currentSettings != null) {
                 val updatedSettings = currentSettings.copy(monthlyIncome = income)
@@ -127,13 +141,9 @@ class BudgetRepository(private val db: AppDatabase) {
                 Log.d(TAG, "Updated existing settings: $updatedSettings")
             } else {
                 val newSettings = Settings(monthlyIncome = income)
-                val id = settingsDao.saveSettings(newSettings)
-                Log.d(TAG, "Created new settings with ID: $id, settings: $newSettings")
+                settingsDao.saveSettings(newSettings)
+                Log.d(TAG, "Created new settings: $newSettings")
             }
-
-            // Verify save
-            val verify = settingsDao.getSettingsSync()
-            Log.d(TAG, "Verification after save: $verify")
         } catch (e: Exception) {
             Log.e(TAG, "Error saving income: ${e.message}", e)
             throw e

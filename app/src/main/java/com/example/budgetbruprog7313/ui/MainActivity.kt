@@ -1,8 +1,13 @@
 package com.example.budgetbruprog7313.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -30,9 +35,38 @@ class MainActivity : ComponentActivity() {
         BudgetRepository(AppDatabase.getDatabase(this))
     }
 
+    // Permission launcher
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permission granted
+            println("Camera permission granted")
+        } else {
+            // Permission denied
+            println("Camera permission denied")
+        }
+    }
+
+    private fun checkAndRequestCameraPermission() {
+        when {
+            ContextCompat.checkSelfPermission(
+                this, Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                // Permission already granted
+            }
+            else -> {
+                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Request camera permission
+        checkAndRequestCameraPermission()
 
         setContent {
             BudgetBruTheme {
@@ -70,7 +104,6 @@ class MainActivity : ComponentActivity() {
                         },
                         floatingActionButtonPosition = FabPosition.End
                     ) { innerPadding ->
-                        // BottomSheet should be outside NavHost to work properly
                         if (showAddExpenseBottomSheet) {
                             ModalBottomSheet(
                                 onDismissRequest = {
