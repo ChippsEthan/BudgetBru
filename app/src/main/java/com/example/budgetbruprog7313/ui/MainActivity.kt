@@ -109,7 +109,7 @@ private fun MainAppContent(repository: BudgetRepository) {
                 PeriodReportScreen()
             }
             composable(Screen.Goals.route) {
-                GoalsScreen()
+                GoalsScreen(repository = repository)
             }
             composable(Screen.ManageCategories.route) {
                 ManageCategoriesScreen()

@@ -21,95 +21,33 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.theme.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.*
-import com.example.budgetbruprog7313.data.database.AppDatabase
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoalsScreen() {
-    val context = LocalContext.current
-    val repository = remember {
-        BudgetRepository(AppDatabase.getDatabase(context))
-    }
-    val scope = rememberCoroutineScope()
+fun GoalsScreen(
+    repository: BudgetRepository
+) {
+    val viewModel: GoalsViewModel = viewModel(factory = GoalsViewModelFactory(repository))
 
-    // State variables
-    var monthlyIncome by remember { mutableStateOf("") }
-    var currentIncome by remember { mutableStateOf(5000.0) }
-    var minGoal by remember { mutableStateOf("") }
-    var maxGoal by remember { mutableStateOf("") }
-    var currentMin by remember { mutableStateOf<Double?>(null) }
-    var currentMax by remember { mutableStateOf<Double?>(null) }
-    var currentMonthTotal by remember { mutableStateOf(0.0) }
-    var isLoading by remember { mutableStateOf(true) }
-    var showIncomeDialog by remember { mutableStateOf(false) }
-    var showGoalsDialog by remember { mutableStateOf(false) }
-    var showSuccessMessage by remember { mutableStateOf(false) }
-    var successMessageText by remember { mutableStateOf("") }
-    var showResetDialog by remember { mutableStateOf(false) }
+    val currentIncome by viewModel.currentIncome.collectAsState()
+    val currentMin by viewModel.currentMin.collectAsState()
+    val currentMax by viewModel.currentMax.collectAsState()
+    val currentMonthTotal by viewModel.currentMonthTotal.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val showSuccessMessage by viewModel.showSuccessMessage.collectAsState()
+    val successMessageText by viewModel.successMessageText.collectAsState()
+
+    // Dialog state variables
+    var showSetGoalsDialog by remember { mutableStateOf(false) }
+    var showSetIncomeDialog by remember { mutableStateOf(false) }
 
     val currencyFormat = NumberFormat.getCurrencyInstance(Locale("en", "ZA")).apply {
         currency = java.util.Currency.getInstance("ZAR")
-    }
-
-    // Auto-hide success message
-    LaunchedEffect(showSuccessMessage) {
-        if (showSuccessMessage) {
-            delay(2000)
-            showSuccessMessage = false
-        }
-    }
-
-    fun getCurrentMonthRange(): Pair<Date, Date> {
-        val calendar = Calendar.getInstance()
-        val start = calendar.apply {
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.time
-        val end = calendar.apply {
-            set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-            set(Calendar.HOUR_OF_DAY, 23)
-            set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 59)
-            set(Calendar.MILLISECOND, 999)
-        }.time
-        return Pair(start, end)
-    }
-
-    // Load all data
-    LaunchedEffect(Unit) {
-        try {
-            val (start, end) = getCurrentMonthRange()
-            repository.getEntriesBetweenDates(start, end).collect { entries ->
-                currentMonthTotal = entries.sumOf { it.amount }
-                isLoading = false
-            }
-
-            repository.getGoals().collect { settings ->
-                currentMin = settings?.minMonthlyGoal
-                currentMax = settings?.maxMonthlyGoal
-                if (settings?.minMonthlyGoal != null) {
-                    minGoal = settings.minMonthlyGoal.toString()
-                }
-                if (settings?.maxMonthlyGoal != null) {
-                    maxGoal = settings.maxMonthlyGoal.toString()
-                }
-            }
-
-            repository.getMonthlyIncome().collect { income ->
-                currentIncome = income ?: 5000.0
-            }
-        } catch (e: Exception) {
-            isLoading = false
-        }
     }
 
     // Calculate metrics
@@ -128,12 +66,12 @@ fun GoalsScreen() {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showIncomeDialog = true },
+                onClick = { showSetGoalsDialog = true },
                 containerColor = BudgetBruPrimary,
                 shape = CircleShape,
                 elevation = FloatingActionButtonDefaults.elevation(8.dp)
             ) {
-                Icon(Icons.Default.AttachMoney, contentDescription = "Set Income", tint = Color.White)
+                Icon(Icons.Default.Edit, contentDescription = "Edit Goals", tint = Color.White)
             }
         }
     ) { paddingValues ->
@@ -146,7 +84,7 @@ fun GoalsScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Animated Success Message
+            // Success Message
             AnimatedVisibility(
                 visible = showSuccessMessage,
                 enter = fadeIn() + slideInVertically(),
@@ -169,95 +107,33 @@ fun GoalsScreen() {
             }
 
             // Header Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Transparent
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(BudgetBruPrimary, BudgetBruSecondary, Color(0xFF6B21A5))
+                        ),
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .padding(24.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    BudgetBruPrimary,
-                                    BudgetBruSecondary,
-                                    Color(0xFF6B21A5)
-                                )
-                            )
-                        )
-                        .padding(24.dp)
-                ) {
-                    Column {
-                        Text(
-                            "Financial Goals",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            "Track your spending and savings",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-            }
-
-            // Income Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkCard),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                modifier = Modifier.size(40.dp),
-                                shape = CircleShape,
-                                color = BudgetBruPrimary.copy(alpha = 0.2f)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Default.AccountBalanceWallet,
-                                        contentDescription = "Wallet",
-                                        tint = BudgetBruPrimary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Monthly Income", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                Text("After tax", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
-                            }
-                        }
-                        IconButton(
-                            onClick = { showIncomeDialog = true },
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = BudgetBruPrimary)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
+                Column {
                     Text(
-                        currencyFormat.format(currentIncome),
-                        fontSize = 36.sp,
+                        "🎯 Financial Goals",
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        color = BudgetBruPrimary
+                        color = Color.White
+                    )
+                    Text(
+                        "Track your spending and savings",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }
 
-            // Goals Card
+            // Current Goals Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -270,32 +146,13 @@ fun GoalsScreen() {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                modifier = Modifier.size(40.dp),
-                                shape = CircleShape,
-                                color = BudgetBruSecondary.copy(alpha = 0.2f)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Default.TrackChanges,
-                                        contentDescription = "Goals",
-                                        tint = BudgetBruSecondary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Spending Goals", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                Text("Monthly limits", fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
-                            }
-                        }
-                        IconButton(
-                            onClick = { showGoalsDialog = true },
-                            modifier = Modifier.size(40.dp)
+                        Text("Current Goals", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = BudgetBruPrimary)
+                        TextButton(
+                            onClick = { showSetGoalsDialog = true }
                         ) {
-                            Icon(Icons.Default.Settings, contentDescription = "Edit", tint = BudgetBruSecondary)
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edit", color = BudgetBruPrimary)
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -306,18 +163,12 @@ fun GoalsScreen() {
                             colors = CardDefaults.cardColors(containerColor = BudgetBruSecondary.copy(alpha = 0.1f)),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Row(
+                            Text(
+                                "No goals set. Tap the edit button to set your monthly spending goals.",
                                 modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.Info, contentDescription = "Info", tint = BudgetBruSecondary)
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    "No goals set yet. Tap the edit icon to set your monthly spending goals.",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 13.sp
-                                )
-                            }
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 13.sp
+                            )
                         }
                     } else {
                         Row(
@@ -338,6 +189,38 @@ fun GoalsScreen() {
                             )
                         }
                     }
+                }
+            }
+
+            // Monthly Income Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = DarkCard),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Monthly Income", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = BudgetBruSecondary)
+                        TextButton(
+                            onClick = { showSetIncomeDialog = true }
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Edit", color = BudgetBruSecondary)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        currencyFormat.format(currentIncome),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = BudgetBruSecondary
+                    )
                 }
             }
 
@@ -363,23 +246,23 @@ fun GoalsScreen() {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            DailyStatCard(
+                            DailyStatBox(
                                 title = "Daily Budget",
                                 value = currencyFormat.format((currentMax ?: 0.0) / daysInMonth),
-                                icon = Icons.Default.Today,
-                                color = BudgetBruPrimary
+                                color = BudgetBruPrimary,
+                                modifier = Modifier.weight(1f)
                             )
-                            DailyStatCard(
+                            DailyStatBox(
                                 title = "Avg Daily Spent",
                                 value = currencyFormat.format(currentMonthTotal / maxOf(1, currentDay)),
-                                icon = Icons.Default.TrendingUp,
-                                color = BudgetBruAccent
+                                color = BudgetBruAccent,
+                                modifier = Modifier.weight(1f)
                             )
-                            DailyStatCard(
+                            DailyStatBox(
                                 title = "Days Left",
                                 value = "$daysLeft",
-                                icon = Icons.Default.DateRange,
-                                color = BudgetBruSecondary
+                                color = BudgetBruSecondary,
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
@@ -480,7 +363,7 @@ fun GoalsScreen() {
                         when {
                             isOverBudget -> {
                                 val overspent = currentMonthTotal - currentMax!!
-                                StatusCard(
+                                StatusBox(
                                     message = "⚠️ Overspent by ${currencyFormat.format(overspent)}",
                                     color = BudgetBruAccent,
                                     icon = Icons.Default.Warning
@@ -488,21 +371,21 @@ fun GoalsScreen() {
                             }
                             isUnderMinGoal -> {
                                 val under = currentMin!! - currentMonthTotal
-                                StatusCard(
+                                StatusBox(
                                     message = "✅ Under budget by ${currencyFormat.format(under)}",
                                     color = BudgetBruPrimary,
                                     icon = Icons.Default.CheckCircle
                                 )
                             }
                             remainingBudget < currentIncome * 0.1 && remainingBudget > 0 -> {
-                                StatusCard(
+                                StatusBox(
                                     message = "⚠️ Only 10% of income remaining. Spend wisely!",
                                     color = Color(0xFFFFA726),
                                     icon = Icons.Default.Info
                                 )
                             }
                             savingsRate > 20 -> {
-                                StatusCard(
+                                StatusBox(
                                     message = "🎉 Amazing! You're saving ${savingsRate.toInt()}% of your income!",
                                     color = Color(0xFF4CAF50),
                                     icon = Icons.Default.Star
@@ -512,86 +395,16 @@ fun GoalsScreen() {
                     }
                 }
             }
-
-            // Reset Button
-            Button(
-                onClick = { showResetDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent,
-                    contentColor = BudgetBruAccent
-                )
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = "Reset")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Reset All Settings")
-            }
         }
     }
 
-    // Income Dialog
-    if (showIncomeDialog) {
-        var tempIncome by remember { mutableStateOf(currentIncome.toString()) }
-
-        AlertDialog(
-            onDismissRequest = { showIncomeDialog = false },
-            title = {
-                Text(
-                    "Set Monthly Income",
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruPrimary
-                )
-            },
-            text = {
-                Column {
-                    Text("Enter your monthly income after tax:", fontSize = 13.sp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = tempIncome,
-                        onValueChange = { tempIncome = it },
-                        label = { Text("Income Amount (R)") },
-                        placeholder = { Text("e.g., 5000") },
-                        singleLine = true,
-                        leadingIcon = { Icon(Icons.Default.AttachMoney, contentDescription = "Money") }
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val income = tempIncome.toDoubleOrNull()
-                        if (income != null && income > 0) {
-                            scope.launch {
-                                repository.saveMonthlyIncome(income)
-                                currentIncome = income
-                                successMessageText = "Income updated to ${currencyFormat.format(income)}!"
-                                showSuccessMessage = true
-                                showIncomeDialog = false
-                            }
-                        }
-                    }
-                ) {
-                    Text("Save", color = BudgetBruPrimary)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showIncomeDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            containerColor = DarkCard
-        )
-    }
-
-    // Goals Dialog
-    if (showGoalsDialog) {
+    // Set Goals Dialog
+    if (showSetGoalsDialog) {
         var tempMin by remember { mutableStateOf(currentMin?.toString() ?: "") }
         var tempMax by remember { mutableStateOf(currentMax?.toString() ?: "") }
 
         AlertDialog(
-            onDismissRequest = { showGoalsDialog = false },
+            onDismissRequest = { showSetGoalsDialog = false },
             title = {
                 Text(
                     "Set Spending Goals",
@@ -624,14 +437,8 @@ fun GoalsScreen() {
                         val min = tempMin.toDoubleOrNull()
                         val max = tempMax.toDoubleOrNull()
                         if (min != null && max != null && min <= max && min > 0 && max > 0) {
-                            scope.launch {
-                                repository.saveGoals(min, max)
-                                currentMin = min
-                                currentMax = max
-                                successMessageText = "Goals saved: Min ${currencyFormat.format(min)}, Max ${currencyFormat.format(max)}"
-                                showSuccessMessage = true
-                                showGoalsDialog = false
-                            }
+                            viewModel.saveGoals(min, max)
+                            showSetGoalsDialog = false
                         }
                     }
                 ) {
@@ -639,7 +446,7 @@ fun GoalsScreen() {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showGoalsDialog = false }) {
+                TextButton(onClick = { showSetGoalsDialog = false }) {
                     Text("Cancel")
                 }
             },
@@ -647,40 +454,48 @@ fun GoalsScreen() {
         )
     }
 
-    // Reset Dialog
-    if (showResetDialog) {
+    // Set Income Dialog
+    if (showSetIncomeDialog) {
+        var tempIncome by remember { mutableStateOf(currentIncome.toString()) }
+
         AlertDialog(
-            onDismissRequest = { showResetDialog = false },
+            onDismissRequest = { showSetIncomeDialog = false },
             title = {
                 Text(
-                    "Reset All Settings?",
+                    "Set Monthly Income",
                     fontWeight = FontWeight.Bold,
-                    color = BudgetBruAccent
+                    color = BudgetBruPrimary
                 )
             },
             text = {
-                Text("This will clear your income and spending goals. Your expenses will not be affected.")
+                Column {
+                    Text("Enter your monthly income after tax:", fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = tempIncome,
+                        onValueChange = { tempIncome = it },
+                        label = { Text("Income Amount (R)") },
+                        placeholder = { Text("e.g., 5000") },
+                        singleLine = true,
+                        leadingIcon = { Icon(Icons.Default.AttachMoney, contentDescription = "Money") }
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        scope.launch {
-                            repository.saveMonthlyIncome(5000.0)
-                            repository.saveGoals(0.0, 0.0)
-                            currentIncome = 5000.0
-                            currentMin = null
-                            currentMax = null
-                            successMessageText = "All settings have been reset!"
-                            showSuccessMessage = true
-                            showResetDialog = false
+                        val income = tempIncome.toDoubleOrNull()
+                        if (income != null && income > 0) {
+                            viewModel.saveIncome(income)
+                            showSetIncomeDialog = false
                         }
                     }
                 ) {
-                    Text("Reset", color = BudgetBruAccent)
+                    Text("Save", color = BudgetBruPrimary)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
+                TextButton(onClick = { showSetIncomeDialog = false }) {
                     Text("Cancel")
                 }
             },
@@ -713,20 +528,13 @@ fun GoalCard(title: String, amount: Double, color: Color, modifier: Modifier = M
 }
 
 @Composable
-fun DailyStatCard(
-    title: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
+fun DailyStatBox(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        Icon(icon, contentDescription = title, tint = color, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.height(4.dp))
         Text(title, fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = color)
     }
 }
@@ -750,7 +558,7 @@ fun StatBox(title: String, value: String, color: Color, modifier: Modifier = Mod
 }
 
 @Composable
-fun StatusCard(message: String, color: Color, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+fun StatusBox(message: String, color: Color, icon: androidx.compose.ui.graphics.vector.ImageVector) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.15f)),

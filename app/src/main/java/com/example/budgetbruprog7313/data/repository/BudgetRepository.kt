@@ -9,6 +9,7 @@ import com.example.budgetbruprog7313.data.model.ExpenseEntry
 import com.example.budgetbruprog7313.data.model.User
 import com.example.budgetbruprog7313.data.model.Settings
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.util.Date
 
@@ -89,13 +90,6 @@ class BudgetRepository(private val db: AppDatabase) {
 
     // ==================== SETTINGS METHODS ====================
 
-
-
-    fun getGoals(): Flow<Settings?> {
-        Log.d(TAG, "getGoals called")
-        return settingsDao.getSettings()
-    }
-    // Replace the saveGoals method in BudgetRepository.kt
     suspend fun saveGoals(min: Double, max: Double) {
         try {
             Log.d(TAG, "saveGoals called with min=$min, max=$max")
@@ -123,13 +117,19 @@ class BudgetRepository(private val db: AppDatabase) {
 
             // Verify save
             val verifySettings = settingsDao.getSettingsSync()
-            Log.d(TAG, "Verification after save: ${verifySettings?.minMonthlyGoal}, ${verifySettings?.maxMonthlyGoal}")
+            Log.d(TAG, "Verification after save: Min=${verifySettings?.minMonthlyGoal}, Max=${verifySettings?.maxMonthlyGoal}")
 
         } catch (e: Exception) {
             Log.e(TAG, "Error saving goals: ${e.message}", e)
             throw e
         }
     }
+
+    fun getGoals(): Flow<Settings?> {
+        Log.d(TAG, "getGoals called")
+        return settingsDao.getSettings()
+    }
+
     suspend fun saveMonthlyIncome(income: Double) {
         try {
             Log.d(TAG, "saveMonthlyIncome called with income=$income")
