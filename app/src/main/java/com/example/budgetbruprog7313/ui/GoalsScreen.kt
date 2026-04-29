@@ -1,6 +1,5 @@
 package com.example.budgetbruprog7313.ui
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -23,7 +22,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.theme.*
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.*
@@ -82,19 +80,18 @@ fun GoalsScreen() {
             val (start, end) = getCurrentMonthRange()
             repository.getEntriesBetweenDates(start, end).collect { entries ->
                 currentMonthTotal = entries.sumOf { it.amount }
+                isLoading = false
             }
 
             repository.getGoals().collect { settings ->
                 currentMin = settings?.minMonthlyGoal
                 currentMax = settings?.maxMonthlyGoal
-                // Update input fields if goals exist
                 if (settings?.minMonthlyGoal != null) {
                     minGoal = settings.minMonthlyGoal.toString()
                 }
                 if (settings?.maxMonthlyGoal != null) {
                     maxGoal = settings.maxMonthlyGoal.toString()
                 }
-                isLoading = false
             }
 
             repository.getMonthlyIncome().collect { income ->
@@ -113,6 +110,10 @@ fun GoalsScreen() {
     } else 0f
     val isOverBudget = currentMax != null && currentMonthTotal > currentMax!!
     val isUnderMinGoal = currentMin != null && currentMonthTotal < currentMin!!
+
+    // Calculate days in current month
+    val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    val daysInMonth = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
 
     Scaffold(
         floatingActionButton = {
@@ -163,15 +164,21 @@ fun GoalsScreen() {
 
             // Save Message
             saveMessage?.let { message ->
-                Snackbar(
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    action = {
-                        TextButton(onClick = { saveMessage = null }) {
-                            Text("Dismiss")
-                        }
-                    }
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (message.contains("✅"))
+                            BudgetBruPrimary.copy(alpha = 0.2f)
+                        else
+                            BudgetBruAccent.copy(alpha = 0.2f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text(message)
+                    Text(
+                        message,
+                        modifier = Modifier.padding(12.dp),
+                        color = if (message.contains("✅")) BudgetBruPrimary else BudgetBruAccent
+                    )
                 }
             }
 
@@ -272,9 +279,250 @@ fun GoalsScreen() {
                 }
             }
 
-            // Progress Section (same as before - kept for brevity)
+            // ===== BUDGET SUMMARY CARD =====
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = BudgetBruPrimary.copy(alpha = 0.15f))
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PieChart,
+                            contentDescription = "Summary",
+                            tint = BudgetBruPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Budget Summary",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = BudgetBruPrimary
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "Daily Budget",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                "R${String.format("%.2f", (currentMax ?: 0.0) / daysInMonth)}",
+                                fontWeight = FontWeight.Bold,
+                                color = BudgetBruPrimary,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "Weekly Budget",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                "R${String.format("%.2f", (currentMax ?: 0.0) / 4)}",
+                                fontWeight = FontWeight.Bold,
+                                color = BudgetBruSecondary,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "Avg Daily Spent",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                "R${String.format("%.2f", if (currentDay > 0) currentMonthTotal / currentDay else 0.0)}",
+                                fontWeight = FontWeight.Bold,
+                                color = if ((if (currentDay > 0) currentMonthTotal / currentDay else 0.0) > ((currentMax ?: 0.0) / daysInMonth))
+                                    BudgetBruAccent
+                                else
+                                    BudgetBruPrimary,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    // Daily comparison indicator
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val avgDailySpent = if (currentDay > 0) currentMonthTotal / currentDay else 0.0
+                    val dailyBudget = (currentMax ?: 0.0) / daysInMonth
+                    if (dailyBudget > 0) {
+                        val percentage = (avgDailySpent / dailyBudget * 100).toInt().coerceIn(0, 200)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                "Daily spend vs budget:",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            LinearProgressIndicator(
+                                progress = (percentage / 100f).coerceIn(0f, 1f),
+                                modifier = Modifier.weight(1f).height(4.dp),
+                                color = if (avgDailySpent <= dailyBudget) BudgetBruPrimary else BudgetBruAccent
+                            )
+                            Text(
+                                "$percentage%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (avgDailySpent <= dailyBudget) BudgetBruPrimary else BudgetBruAccent
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Progress Section
             if (currentMax != null && currentMax!! > 0) {
-                // ... (keep existing progress section)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isOverBudget)
+                            BudgetBruAccent.copy(alpha = 0.15f)
+                        else DarkCard
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Text("📊 Monthly Progress", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Progress bar
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Spent: ${currencyFormat.format(currentMonthTotal)}")
+                                Text("Goal: ${currencyFormat.format(currentMax)}")
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = progressToMaxGoal,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(12.dp)
+                                    .clip(RoundedCornerShape(6.dp)),
+                                color = when {
+                                    isOverBudget -> BudgetBruAccent
+                                    progressToMaxGoal > 0.8f -> Color(0xFFFFA726)
+                                    else -> BudgetBruPrimary
+                                },
+                                trackColor = DarkCard
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Stats grid
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            StatBox(
+                                title = "Remaining",
+                                value = currencyFormat.format(remainingBudget),
+                                color = if (remainingBudget > 0) BudgetBruPrimary else BudgetBruAccent,
+                                modifier = Modifier.weight(1f)
+                            )
+                            StatBox(
+                                title = "Savings Rate",
+                                value = "${savingsRate.toInt()}%",
+                                color = BudgetBruSecondary,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Status messages
+                        when {
+                            isOverBudget -> {
+                                val overspent = currentMonthTotal - currentMax!!
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = BudgetBruAccent.copy(alpha = 0.2f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Warning, contentDescription = "Warning", tint = BudgetBruAccent)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "⚠️ Overspent by ${currencyFormat.format(overspent)}",
+                                            color = BudgetBruAccent,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            isUnderMinGoal -> {
+                                val under = currentMin!! - currentMonthTotal
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = BudgetBruPrimary.copy(alpha = 0.2f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.CheckCircle, contentDescription = "Success", tint = BudgetBruPrimary)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "✅ Under budget by ${currencyFormat.format(under)}",
+                                            color = BudgetBruPrimary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            currentMonthTotal > 0 && remainingBudget < (currentIncome * 0.1) -> {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFFFFA726).copy(alpha = 0.2f)
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Info, contentDescription = "Info", tint = Color(0xFFFFA726))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "⚠️ Only 10% of income remaining",
+                                            color = Color(0xFFFFA726),
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -330,7 +578,8 @@ fun GoalsScreen() {
                 TextButton(onClick = { showIncomeDialog = false }) {
                     Text("Cancel")
                 }
-            }
+            },
+            containerColor = DarkCard
         )
     }
 
@@ -397,7 +646,26 @@ fun GoalsScreen() {
                 TextButton(onClick = { showGoalsDialog = false }) {
                     Text("Cancel")
                 }
-            }
+            },
+            containerColor = DarkCard
         )
+    }
+}
+
+@Composable
+fun StatBox(title: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = DarkCard),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(title, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(value, fontWeight = FontWeight.Bold, color = color, fontSize = 16.sp)
+        }
     }
 }

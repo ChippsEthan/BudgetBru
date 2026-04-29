@@ -10,6 +10,12 @@ interface ExpenseEntryDao {
     @Insert
     suspend fun insertEntry(entry: ExpenseEntry): Long
 
+    @Delete
+    suspend fun deleteEntry(entry: ExpenseEntry)
+
+    @Query("DELETE FROM expense_entries WHERE id = :id")
+    suspend fun deleteEntryById(id: Long)
+
     @Query("""
         SELECT * FROM expense_entries 
         WHERE date BETWEEN :startDate AND :endDate 

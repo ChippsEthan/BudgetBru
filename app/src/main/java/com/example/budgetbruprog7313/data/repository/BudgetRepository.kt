@@ -33,6 +33,14 @@ class BudgetRepository(private val db: AppDatabase) {
         return Result.success(Unit)
     }
 
+    suspend fun deleteExpense(expense: ExpenseEntry) {
+        entryDao.deleteEntry(expense)
+    }
+
+    suspend fun deleteExpenseById(id: Long) {
+        entryDao.deleteEntryById(id)
+    }
+
     // ==================== CATEGORY METHODS ====================
 
     val allCategories: Flow<List<Category>> = categoryDao.getAllCategories()

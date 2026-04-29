@@ -51,6 +51,8 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     var selectedQuickAmount by remember { mutableStateOf(50.0) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var expenseToDelete by remember { mutableStateOf<ExpenseEntry?>(null) }
 
     val dateFormatter = remember { SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault()) }
     val currentDate = remember { dateFormatter.format(Date()) }
@@ -89,7 +91,7 @@ fun HomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Settings */ }) {
+                    IconButton(onClick = { /* TODO: Settings will be added later */ }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
                 },
@@ -99,7 +101,6 @@ fun HomeScreen(
                 )
             )
         }
-        // FAB REMOVED from here - now handled by MainActivity
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -301,7 +302,7 @@ fun HomeScreen(
                 }
             }
 
-            // Recent Expenses List
+            // Recent Expenses List with Delete Functionality
             if (isLoading) {
                 repeat(3) {
                     ShimmerCard()
@@ -316,13 +317,71 @@ fun HomeScreen(
             } else {
                 recentExpenses.forEachIndexed { index, expense ->
                     AnimatedExpenseItem(index) {
-                        ExpenseCard(expense)
+                        ExpenseCard(
+                            expense = expense,
+                            onDelete = {
+                                expenseToDelete = expense
+                                showDeleteConfirmation = true
+                            }
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    // Delete Confirmation Dialog
+    if (showDeleteConfirmation && expenseToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmation = false
+                expenseToDelete = null
+            },
+            title = {
+                Text(
+                    "Delete Expense",
+                    fontWeight = FontWeight.Bold,
+                    color = BudgetBruAccent
+                )
+            },
+            text = {
+                Text("Are you sure you want to delete \"${expenseToDelete?.description}\" for R${String.format("%.2f", expenseToDelete?.amount ?: 0.0)}?")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        expenseToDelete?.let { expense ->
+                            scope.launch {
+                                try {
+                                    repository.deleteExpense(expense)
+                                    showDeleteConfirmation = false
+                                    expenseToDelete = null
+                                    viewModel.refresh()
+                                    snackbarHostState.showSnackbar("Expense deleted successfully")
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar("Error deleting expense: ${e.message}")
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Text("Delete", color = BudgetBruAccent)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showDeleteConfirmation = false
+                    expenseToDelete = null
+                }) {
+                    Text("Cancel")
+                }
+            },
+            containerColor = DarkCard,
+            titleContentColor = BudgetBruAccent,
+            textContentColor = Color.White
+        )
     }
 }
 
@@ -384,9 +443,16 @@ fun QuickStatCard(
 }
 
 @Composable
-fun ExpenseCard(expense: ExpenseEntry) {
+fun ExpenseCard(
+    expense: ExpenseEntry,
+    onDelete: (() -> Unit)? = null
+) {
+    var showDeleteButton by remember { mutableStateOf(false) }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showDeleteButton = !showDeleteButton },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = DarkCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -429,6 +495,25 @@ fun ExpenseCard(expense: ExpenseEntry) {
                     )
                 }
             }
+
+            // Delete button (appears on click)
+            AnimatedVisibility(
+                visible = showDeleteButton && onDelete != null,
+                enter = fadeIn() + slideInHorizontally(),
+                exit = fadeOut() + slideOutHorizontally()
+            ) {
+                Row {
+                    IconButton(onClick = onDelete!!) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = BudgetBruAccent
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
+
             Text(
                 text = "R${String.format("%,.2f", expense.amount)}",
                 color = BudgetBruAccent,

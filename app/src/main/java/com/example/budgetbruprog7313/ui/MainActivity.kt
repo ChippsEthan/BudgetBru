@@ -20,7 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.budgetbruprog7313.data.database.AppDatabase
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
-import com.example.budgetbruprog7313.ui.navigation.BudgetBruBottomBar
+import com.example.budgetbruprog7313.ui.navigation.InnovativeBottomBar
 import com.example.budgetbruprog7313.ui.theme.BudgetBruPrimary
 import com.example.budgetbruprog7313.ui.theme.BudgetBruTheme
 
@@ -36,30 +36,22 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             BudgetBruTheme {
-                // Move isLoggedIn to remember with initial value from saved state
                 var isLoggedIn by remember { mutableStateOf(false) }
                 val navController = rememberNavController()
                 var showAddExpenseBottomSheet by remember { mutableStateOf(false) }
                 val sheetState = rememberModalBottomSheetState()
 
-                // Handle login success
-                fun onLoginSuccess() {
-                    isLoggedIn = true
-                }
-
                 if (!isLoggedIn) {
                     LoginScreen(
-                        onLoginSuccess = { onLoginSuccess() },
+                        onLoginSuccess = { isLoggedIn = true },
                         repository = repository
                     )
                 } else {
                     Scaffold(
-                        bottomBar = { BudgetBruBottomBar(navController) },
+                        bottomBar = { InnovativeBottomBar(navController) },
                         floatingActionButton = {
                             FloatingActionButton(
-                                onClick = {
-                                    showAddExpenseBottomSheet = true
-                                },
+                                onClick = { showAddExpenseBottomSheet = true },
                                 containerColor = BudgetBruPrimary,
                                 contentColor = Color.White,
                                 modifier = Modifier.size(56.dp),

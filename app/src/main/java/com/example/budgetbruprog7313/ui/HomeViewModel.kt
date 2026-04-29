@@ -58,7 +58,7 @@ class HomeViewModel(
 
     // Real monthly income from database
     private val monthlyIncome: StateFlow<Double> = repository.getMonthlyIncome()
-        .map { it ?: 5000.0 } // Default to 5000 if not set
+        .map { it ?: 5000.0 }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5000.0)
 
     // Available balance (real income minus spent)
@@ -79,7 +79,6 @@ class HomeViewModel(
     fun refresh() {
         viewModelScope.launch {
             _isLoading.value = true
-            // Force refresh by collecting again
             totalSpent.collect { /* no-op */ }
             recentExpenses.collect { /* no-op */ }
             availableBalance.collect { /* no-op */ }
@@ -100,6 +99,14 @@ class HomeViewModel(
                 categoryId = categoryId,
                 photoPath = null
             )
+        }
+    }
+
+    // Add delete expense method
+    fun deleteExpense(expense: ExpenseEntry) {
+        viewModelScope.launch {
+            // You need to add this method to your repository and DAO
+            // repository.deleteExpense(expense)
         }
     }
 }

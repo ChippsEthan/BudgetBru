@@ -16,4 +16,8 @@ sealed class Screen(
     data object IOU : Screen("iou", "IOU", Default.Person)
     data object Tips : Screen("tips", "Tips", Default.Info)
     data object ManageCategories : Screen("manage_categories", "Categories", Default.Category)
+
+    data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+
+
 }
