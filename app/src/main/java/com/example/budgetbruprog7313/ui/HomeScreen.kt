@@ -899,8 +899,9 @@ fun TransactionCard(
 
     val isExpense = transaction is Transaction.Expense
     val icon = if (isExpense) Icons.Default.Receipt else Icons.Default.AttachMoney
-    val iconColor = if (isExpense) BudgetBruAccent else BudgetBruSecondary
-    val amountColor = if (isExpense) BudgetBruAccent else BudgetBruSecondary
+    // Light blue for income, red for expense
+    val iconColor = if (isExpense) BudgetBruAccent else Color(0xFF4FC3F7)  // Light blue
+    val amountColor = if (isExpense) BudgetBruAccent else Color(0xFF4FC3F7)  // Light blue
     val amountPrefix = if (isExpense) "-R" else "+R"
 
     Card(
@@ -916,13 +917,14 @@ fun TransactionCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Left side: Icon + Description + Date + Category
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
                     shape = CircleShape,
-                    color = iconColor.copy(alpha = 0.2f),
+                    color = iconColor.copy(alpha = 0.15f),
                     modifier = Modifier.size(48.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -940,7 +942,8 @@ fun TransactionCard(
                         text = transaction.description,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        color = Color.White
                     )
                     Text(
                         text = SimpleDateFormat("dd MMM yyyy • HH:mm", Locale.getDefault()).format(transaction.date),
@@ -954,6 +957,26 @@ fun TransactionCard(
                             color = BudgetBruSecondary
                         )
                     }
+                }
+            }
+
+            // Right side: Delete button OR Amount (only one, not both)
+            if (showDeleteButton) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = BudgetBruAccent
+                    )
+                }
+            } else {
+                Text(
+                    text = "$amountPrefix${String.format("%,.2f", transaction.amount)}",
+                    color = amountColor,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
                 }
             }
 
@@ -979,7 +1002,31 @@ fun TransactionCard(
                 color = amountColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
+                        )
+
+
+            AnimatedVisibility(
+                visible = showDeleteButton,
+                enter = fadeIn() + slideInHorizontally(),
+                exit = fadeOut() + slideOutHorizontally()
+            ) {
+                Row {
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = BudgetBruAccent
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
+
+            Text(
+                text = "$amountPrefix${String.format("%,.2f", transaction.amount)}",
+                color = amountColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
             )
         }
-    }
-}
+

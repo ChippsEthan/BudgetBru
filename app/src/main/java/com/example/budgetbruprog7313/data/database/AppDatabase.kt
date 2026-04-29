@@ -6,21 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.budgetbruprog7313.data.dao.CategoryDao
-import com.example.budgetbruprog7313.data.dao.ExpenseEntryDao
-import com.example.budgetbruprog7313.data.dao.SettingsDao
-import com.example.budgetbruprog7313.data.dao.UserDao
-import com.example.budgetbruprog7313.data.model.Category
-import com.example.budgetbruprog7313.data.model.ExpenseEntry
-import com.example.budgetbruprog7313.data.model.Settings
-import com.example.budgetbruprog7313.data.model.User
+import com.example.budgetbruprog7313.data.dao.*
+import com.example.budgetbruprog7313.data.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 
 @Database(
-    entities = [User::class, Category::class, ExpenseEntry::class, Settings::class],
+    entities = [User::class, Category::class, ExpenseEntry::class, Settings::class, IncomeEntry::class],
     version = 7,
     exportSchema = false
 )
@@ -31,6 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun expenseEntryDao(): ExpenseEntryDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun incomeDao(): IncomeDao
 
     companion object {
         @Volatile
@@ -61,15 +55,12 @@ abstract class AppDatabase : RoomDatabase() {
                     val categoryDao = database.categoryDao()
                     val settingsDao = database.settingsDao()
 
-                    // Create default user only if none exists
-                    val existingUser = runBlocking { userDao.getUserByUsername("test") }
+                    val existingUser = userDao.getUserByUsername("test")
                     if (existingUser == null) {
                         val defaultUser = User(username = "test", password = "1234")
                         userDao.insertUser(defaultUser)
-                        println("✅ BudgetBru: Default user 'test/1234' created!")
                     }
 
-                    // Create default categories only if none exist
                     val existingCategories = categoryDao.getAllCategoriesList()
                     if (existingCategories.isEmpty()) {
                         val defaultCategories = listOf(
@@ -85,10 +76,8 @@ abstract class AppDatabase : RoomDatabase() {
                         defaultCategories.forEach { category ->
                             categoryDao.insertCategory(category)
                         }
-                        println("✅ BudgetBru: Default categories created!")
                     }
 
-                    // Create default settings only if none exist
                     val existingSettings = settingsDao.getSettingsSync()
                     if (existingSettings == null) {
                         val defaultSettings = Settings(
@@ -97,7 +86,6 @@ abstract class AppDatabase : RoomDatabase() {
                             maxMonthlyGoal = null
                         )
                         settingsDao.saveSettings(defaultSettings)
-                        println("✅ BudgetBru: Default settings created!")
                     }
                 }
             }

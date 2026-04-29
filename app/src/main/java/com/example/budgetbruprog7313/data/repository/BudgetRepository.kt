@@ -4,10 +4,7 @@ import android.util.Log
 import com.example.budgetbruprog7313.data.dao.ExpenseEntryDao
 import com.example.budgetbruprog7313.data.dao.SettingsDao
 import com.example.budgetbruprog7313.data.database.AppDatabase
-import com.example.budgetbruprog7313.data.model.Category
-import com.example.budgetbruprog7313.data.model.ExpenseEntry
-import com.example.budgetbruprog7313.data.model.User
-import com.example.budgetbruprog7313.data.model.Settings
+import com.example.budgetbruprog7313.data.model.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.Date
@@ -18,6 +15,7 @@ class BudgetRepository(private val db: AppDatabase) {
     private val categoryDao = db.categoryDao()
     private val entryDao = db.expenseEntryDao()
     private val settingsDao = db.settingsDao()
+    private val incomeDao = db.incomeDao()
 
     private val TAG = "BudgetRepository"
 
@@ -86,6 +84,16 @@ class BudgetRepository(private val db: AppDatabase) {
         Log.d(TAG, "Deleting expense by ID: $id")
         entryDao.deleteEntryById(id)
     }
+
+    // ==================== INCOME METHODS ====================
+
+    fun getAllIncomes(): Flow<List<IncomeEntry>> = incomeDao.getAllIncomes()
+
+    suspend fun addIncomeEntry(income: IncomeEntry): Long = incomeDao.insertIncome(income)
+
+    suspend fun deleteIncomeEntry(income: IncomeEntry) = incomeDao.deleteIncome(income)
+
+    suspend fun deleteIncomeById(id: Long) = incomeDao.deleteIncomeById(id)
 
     // ==================== SETTINGS METHODS ====================
 
