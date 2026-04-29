@@ -100,34 +100,7 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 
 ---
 
-## Screenshots
 
-<div align="center">
-  <table>
-    <tr>
-      <td><img src="screenshots/login.jpg" width="200" alt="Login Screen"/></td>
-      <td><img src="screenshots/home.jpg" width="200" alt="Home Screen"/></td>
-      <td><img src="screenshots/add_expense.jpg" width="200" alt="Add Expense"/></td>
-    </tr>
-    <tr>
-      <td align="center"><b>Login Screen</b></td>
-      <td align="center"><b>Home Dashboard</b></td>
-      <td align="center"><b>Add Expense</b></td>
-    </tr>
-    <tr>
-      <td><img src="screenshots/reports.jpg" width="200" alt="Reports"/></td>
-      <td><img src="screenshots/goals.jpg" width="200" alt="Goals"/></td>
-      <td><img src="screenshots/iou.jpg" width="200" alt="IOU Tracker"/></td>
-    </tr>
-    <tr>
-      <td align="center"><b>Expense Reports</b></td>
-      <td align="center"><b>Financial Goals</b></td>
-      <td align="center"><b>IOU Tracker</b></td>
-    </tr>
-  </table>
-</div>
-
----
 
 ## Installation
 
