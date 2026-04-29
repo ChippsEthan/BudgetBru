@@ -1,4 +1,4 @@
-# 💰 BudgetBru - Smart Budgeting for Students
+# BudgetBru - Smart Budgeting for Students
 
 <div align="center">
 
@@ -16,11 +16,11 @@
 
 ---
 
-## 📱 Overview
+## Overview
 
 BudgetBru is a comprehensive budget tracking application built with modern Android technologies. It helps students track their spending, set monthly financial goals, manage IOUs with friends, and gain insights into their spending habits through detailed reports and visual analytics.
 
-### 🎯 Why BudgetBru?
+### Why BudgetBru?
 - **Student-Focused**: Designed with student budgets and lifestyle in mind
 - **Simple & Intuitive**: Clean, modern interface that's easy to navigate
 - **Powerful Analytics**: Visual charts and reports to understand your spending
@@ -28,13 +28,13 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 
 ---
 
-## ✨ Features
+## Features
 
-### 🔐 Authentication
+### Authentication
 - Secure login system with username/password
 - Demo account: `test` / `1234`
 
-### 📂 Category Management
+### Category Management
 - Create custom expense categories
 - Delete unwanted categories
 - Pre-loaded default categories (Food, Transport, Groceries, etc.)
@@ -45,32 +45,32 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 - **Optional photo attachment** for receipts
 - Quick add with preset amounts (R20, R50, R100, R200, R500)
 
-### 🎯 Financial Goals
+### Financial Goals
 - Set monthly income
 - Define minimum and maximum spending goals
 - Real-time progress tracking with visual indicators
 - Daily, weekly, and monthly budget breakdowns
 
-### 📊 Reports & Analytics
+### Reports & Analytics
 - **Date Range Selection**: View expenses for any period
 - **Expense List**: All entries with photos accessible
 - **Category Totals**: View total spent per category
 - **Interactive Pie Chart**: Visual spending distribution
 - **Progress Bars**: Percentage breakdown of spending
 
-### 🤝 IOU Tracker
+### IOU Tracker
 - Track money lent to friends
 - Track money borrowed from friends
 - Mark IOUs as settled
 - Filter by lent, borrowed, or all
 - Summary cards showing totals
 
-### 💡 Budgeting Tips
+### Budgeting Tips
 - 10+ expert budgeting tips for students
 - Categories: Budgeting, Saving, Cutting Costs, Student Perks
 - Search and filter functionality
 
-### ⚙️ Settings
+### Settings
 - Notification controls
 - About and version info
 - Share app feature
@@ -78,7 +78,7 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
@@ -100,7 +100,7 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 <div align="center">
   <table>
@@ -129,7 +129,7 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 - Android Studio Flamingo (2022.2.1) or later
