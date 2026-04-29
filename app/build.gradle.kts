@@ -57,12 +57,13 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
     // Material Icons Extended - Version is managed by BOM, no version needed!
     implementation("androidx.compose.material:material-icons-extended")
-
+    implementation("com.google.code.gson:gson:2.10.1")
     // Remove this conflicting line:
     // implementation("androidx.compose.material:material-icons-core:1.7.8")
 
     // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.8.0")  // Updated
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+    implementation(libs.firebase.crashlytics.buildtools)  // Updated
 
     // Room
     val room_version = "2.6.1"

@@ -5,7 +5,6 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.budgetbruprog7313.data.dao.CategoryDao
 import com.example.budgetbruprog7313.data.dao.ExpenseEntryDao
@@ -18,10 +17,11 @@ import com.example.budgetbruprog7313.data.model.User
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 @Database(
     entities = [User::class, Category::class, ExpenseEntry::class, Settings::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -36,39 +36,6 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // Define migrations for each version change
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Add new columns or tables for version 2
-                database.execSQL("ALTER TABLE settings ADD COLUMN monthlyIncome REAL DEFAULT 5000.0")
-            }
-        }
-
-        private val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Migrations for version 3 if needed
-            }
-        }
-
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Migrations for version 4 if needed
-            }
-        }
-
-        private val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Migrations for version 5 if needed
-            }
-        }
-
-        private val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Migrations for version 6 if needed
-                // Add any schema changes from version 5 to 6
-            }
-        }
-
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -76,20 +43,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "budgetbru_db"
                 )
-                    // IMPORTANT: Remove fallbackToDestructiveMigration() for production!
-                    // Add migrations instead
-                    .addMigrations(
-                        MIGRATION_1_2,
-                        MIGRATION_2_3,
-                        MIGRATION_3_4,
-                        MIGRATION_4_5,
-                        MIGRATION_5_6
-                    )
-                    // Only use this in development, remove for production
-                    // .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback())
                     .build()
-
                 INSTANCE = instance
                 instance
             }
@@ -105,10 +61,9 @@ abstract class AppDatabase : RoomDatabase() {
                     val categoryDao = database.categoryDao()
                     val settingsDao = database.settingsDao()
 
-                    // Only seed data if tables are empty
-                    val existingUser = userDao.getUserByUsername("test")
+                    // Create default user only if none exists
+                    val existingUser = runBlocking { userDao.getUserByUsername("test") }
                     if (existingUser == null) {
-                        // Create default user: test / 1234
                         val defaultUser = User(username = "test", password = "1234")
                         userDao.insertUser(defaultUser)
                         println("✅ BudgetBru: Default user 'test/1234' created!")

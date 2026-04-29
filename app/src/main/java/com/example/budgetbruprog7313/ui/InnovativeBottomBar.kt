@@ -37,7 +37,7 @@ fun InnovativeBottomBar(navController: NavController) {
         NavItem(Screen.Expenses, "Reports", Icons.Default.TrendingUp),
         NavItem(Screen.Goals, "Goals", Icons.Default.Flag),
         NavItem(Screen.ManageCategories, "Categories", Icons.Default.Category),
-        NavItem(Screen.IOU, "IOU", Icons.Default.People)
+        NavItem(Screen.More, "More", Icons.Default.MoreVert)  // Changed from IOU to More
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -102,66 +102,59 @@ fun ModernNavItem(
         label = "scale"
     )
 
-    // Use a fixed width container instead of weight
-    Box(
+    Column(
         modifier = Modifier
-            .width(70.dp)
-            .height(64.dp)
+            .wrapContentSize()
             .clickable(
                 interactionSource = interactionSource,
                 indication = null
             ) { onClick() }
+            .scale(scale)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .scale(scale),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Animated icon background for selected
-            if (isSelected) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    BudgetBruPrimary.copy(alpha = 0.3f),
-                                    Color.Transparent
-                                ),
-                                radius = 25f
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        item.icon,
-                        contentDescription = item.title,
-                        tint = BudgetBruPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            } else {
+        // Animated icon background for selected
+        if (isSelected) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                BudgetBruPrimary.copy(alpha = 0.3f),
+                                Color.Transparent
+                            ),
+                            radius = 25f
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     item.icon,
                     contentDescription = item.title,
-                    tint = Color.White.copy(alpha = 0.5f),
+                    tint = BudgetBruPrimary,
                     modifier = Modifier.size(24.dp)
                 )
             }
-
-            // Label
-            Text(
-                text = item.title,
-                fontSize = if (isSelected) 11.sp else 10.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) BudgetBruPrimary else Color.White.copy(alpha = 0.5f),
-                maxLines = 1,
-                modifier = Modifier.padding(top = 4.dp)
+        } else {
+            Icon(
+                item.icon,
+                contentDescription = item.title,
+                tint = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.size(24.dp)
             )
         }
+
+        // Label
+        Text(
+            text = item.title,
+            fontSize = if (isSelected) 11.sp else 10.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) BudgetBruPrimary else Color.White.copy(alpha = 0.5f),
+            maxLines = 1
+        )
     }
 }
 

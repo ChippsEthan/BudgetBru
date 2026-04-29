@@ -38,7 +38,8 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    repository: BudgetRepository
+    repository: BudgetRepository,
+    onViewAllClick: () -> Unit = {}  // Navigation callback parameter
 ) {
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(repository))
     val totalSpent by viewModel.totalSpent.collectAsState()
@@ -286,7 +287,7 @@ fun HomeScreen(
                 }
             }
 
-            // Recent Activity Header with View All
+            // Recent Activity Header with View All - FIXED: onViewAllClick is now used
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -297,7 +298,9 @@ fun HomeScreen(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
-                TextButton(onClick = { /* TODO: View all expenses */ }) {
+                TextButton(
+                    onClick = onViewAllClick  // This now navigates to AllExpenses
+                ) {
                     Text("View All", color = BudgetBruPrimary)
                 }
             }
