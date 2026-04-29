@@ -2,15 +2,10 @@
 
 <div align="center">
 
-![Platform](https://img.shields.io/badge/platform-Android-green)
-![Kotlin](https://img.shields.io/badge/Kotlin-1.9.24-purple)
-![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-1.7.0-blue)
-![Room](https://img.shields.io/badge/Room-2.6.1-orange)
-![License](https://img.shields.io/badge/license-MIT-red)
 
 **A modern, feature-rich budget tracking app designed specifically for students to manage expenses, set financial goals, and track money owed to friends.**
 
-[Features](#features) • [Tech Stack](#tech-stack) • [Installation](#installation) • [Usage](#usage) • [Demo Credentials](#demo-credentials)
+[Features](#features) • [Tech Stack](#tech-stack) • 
 
 </div>
 
@@ -102,16 +97,4 @@ BudgetBru is a comprehensive budget tracking application built with modern Andro
 
 
 
-## Installation
 
-### Prerequisites
-- Android Studio Flamingo (2022.2.1) or later
-- JDK 11 or higher
-- Android SDK 34 (Android 14)
-
-### Steps
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/BudgetBru.git
-   cd BudgetBru
