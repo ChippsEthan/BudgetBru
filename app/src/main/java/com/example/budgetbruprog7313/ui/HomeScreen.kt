@@ -56,6 +56,114 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+// ==================== TIP CALCULATOR DIALOG (NEW FEATURE) ====================
+
+@Composable
+fun TipCalculatorDialog(onDismiss: () -> Unit) {
+    var billAmount by remember { mutableStateOf("") }
+    var tipPercent by remember { mutableStateOf(15f) } // default 15%
+    val decimalFormat = java.text.DecimalFormat("#.##")
+
+    val bill = billAmount.toDoubleOrNull() ?: 0.0
+    val tipAmount = bill * (tipPercent / 100)
+    val total = bill + tipAmount
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1E1E2F), // matches your dark card background
+        title = {
+            Text(
+                "Tip Calculator",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Bill input
+                OutlinedTextField(
+                    value = billAmount,
+                    onValueChange = { billAmount = it.filter { char -> char.isDigit() || char == '.' } },
+                    label = { Text("Bill amount (R)", color = Color.White.copy(alpha = 0.7f)) },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF00BCD4),
+                        unfocusedBorderColor = Color.Gray,
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Tip percentage selector
+                Text("Tip percentage: ${tipPercent.toInt()}%", color = Color.White)
+                Slider(
+                    value = tipPercent,
+                    onValueChange = { tipPercent = it },
+                    valueRange = 0f..30f,
+                    steps = 5,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color(0xFF00BCD4),
+                        activeTrackColor = Color(0xFF00BCD4)
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Results card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A3E))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Tip amount:", color = Color.White.copy(alpha = 0.8f))
+                        Text(
+                            text = "R ${decimalFormat.format(tipAmount)}",
+                            color = Color(0xFF00BCD4),
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Total bill:", color = Color.White.copy(alpha = 0.8f))
+                        Text(
+                            text = "R ${decimalFormat.format(total)}",
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Transparent
+                ),
+                content = {
+                    Text(
+                        "Close",
+                        color = Color(0xFF00BCD4),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            )
+        },
+        dismissButton = null
+    )
+}
+
 // ==================== INNOVATIVE FAB COMPONENT ====================
 
 @Composable
@@ -394,6 +502,9 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
     var showScanReceiptSnackbar by remember { mutableStateOf(false) }
     var selectedExpense by remember { mutableStateOf<ExpenseEntry?>(null) }
 
+    // NEW: State for Tip Calculator dialog
+    var showTipDialog by remember { mutableStateOf(false) }
+
     val configuration = LocalConfiguration.current
     val currentLocale = remember(configuration) { configuration.locales[0] ?: Locale.getDefault() }
 
@@ -427,6 +538,11 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                     }
                 },
                 actions = {
+                    // NEW: Tip Calculator button
+                    IconButton(onClick = { showTipDialog = true }) {
+                        Icon(Icons.Default.Calculate, contentDescription = "Tip Calculator")
+                    }
+                    // Existing Settings button
                     IconButton(onClick = { /* TODO: Settings */ }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
@@ -754,6 +870,11 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
             onDismiss = { selectedExpense = null },
             currentLocale = currentLocale
         )
+    }
+
+    // NEW: Tip Calculator dialog
+    if (showTipDialog) {
+        TipCalculatorDialog(onDismiss = { showTipDialog = false })
     }
 }
 
