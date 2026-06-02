@@ -338,6 +338,50 @@ fun GoalsScreen(
                             )
                         }
 
+                        // ========== NEW: Min-Max range visual indicator (Part 3 requirement) ==========
+                        if (currentMin != null && currentMin!! > 0 && currentMax != null && currentMax!! > 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Divider(color = Color.White.copy(alpha = 0.1f))
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text("📍 Within Goal Range (Min–Max)", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            val rangeWidth = (currentMax!! - currentMin!!).toFloat()
+                            val spentInRange = (currentMonthTotal - currentMin!!).toFloat().coerceIn(0f, rangeWidth)
+                            val rangeProgress = if (rangeWidth > 0) spentInRange / rangeWidth else 0f
+
+                            LinearProgressIndicator(
+                                progress = rangeProgress,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = when {
+                                    currentMonthTotal < currentMin!! -> Color(0xFF4CAF50)  // Green (below min)
+                                    currentMonthTotal <= currentMax!! -> Color(0xFF00BCD4) // Teal (within)
+                                    else -> BudgetBruAccent // Red (over)
+                                },
+                                trackColor = DarkCard
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("Min: ${currencyFormat.format(currentMin)}", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+                                Text("Current: ${currencyFormat.format(currentMonthTotal)}", fontSize = 11.sp, color = Color.White.copy(alpha = 0.7f))
+                                Text("Max: ${currencyFormat.format(currentMax)}", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            when {
+                                currentMonthTotal < currentMin!! -> Text("✅ Below minimum goal", fontSize = 12.sp, color = Color(0xFF4CAF50))
+                                currentMonthTotal <= currentMax!! -> Text("🎯 On track – within your goal range", fontSize = 12.sp, color = Color(0xFF00BCD4))
+                                else -> Text("⚠️ Over maximum budget", fontSize = 12.sp, color = BudgetBruAccent)
+                            }
+                        }
+                        // ========== END OF NEW INDICATOR ==========
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Row(
