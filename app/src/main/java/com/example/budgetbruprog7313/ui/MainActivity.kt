@@ -3,38 +3,49 @@ package com.example.budgetbruprog7313.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.budgetbruprog7313.data.database.AppDatabase
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.navigation.InnovativeBottomBar
-import com.example.budgetbruprog7313.ui.theme.BudgetBruPrimary
 import com.example.budgetbruprog7313.ui.theme.BudgetBruTheme
+// Make sure this import points to your Screen class
+import com.example.budgetbruprog7313.ui.Screen  // Import from ui package, not navigation
 
 class MainActivity : ComponentActivity() {
 
-    private val repository by lazy {
-        BudgetRepository(AppDatabase.getDatabase(this))
-    }
+    private val repository by lazy { BudgetRepository() }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         setContent {
             BudgetBruTheme {
-                var isLoggedIn by rememberSaveable { mutableStateOf(false) }
+                var isLoggedIn by rememberSaveable { mutableStateOf(repository.isLoggedIn()) }
 
                 if (!isLoggedIn) {
                     LoginScreen(
@@ -42,7 +53,10 @@ class MainActivity : ComponentActivity() {
                         repository = repository
                     )
                 } else {
-                    MainAppContent(repository = repository)
+                    MainAppContent(
+                        repository = repository,
+                        onLogout = { isLoggedIn = false }
+                    )
                 }
             }
         }
@@ -51,20 +65,76 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MainAppContent(repository: BudgetRepository) {
+fun MainAppContent(
+    repository: BudgetRepository,
+    onLogout: () -> Unit
+) {
     val navController = rememberNavController()
     var showAddExpenseBottomSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Track current route for FAB visibility
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
-        bottomBar = { InnovativeBottomBar(navController) }
-        // NO FLOATING ACTION BUTTON HERE - The FAB is now in HomeScreen only
+        containerColor = Color(0xFF07070F),
+        bottomBar = {
+            InnovativeBottomBar(navController = navController)
+        },
+        floatingActionButton = {
+            // FAB only visible on Home screen
+            AnimatedVisibility(
+                visible = currentRoute == Screen.Home.route,
+                enter = fadeIn() + slideInVertically { it },
+                exit = fadeOut() + slideOutVertically { it }
+            ) {
+                FloatingActionButton(
+                    onClick = { showAddExpenseBottomSheet = true },
+                    shape = CircleShape,
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White,
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF6366F1),
+                                    Color(0xFF10B981)
+                                )
+                            )
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Add Expense",
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
     ) { innerPadding ->
 
+        // Add Expense Bottom Sheet
         if (showAddExpenseBottomSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showAddExpenseBottomSheet = false },
-                sheetState = sheetState
+                sheetState = sheetState,
+                containerColor = Color(0xFF0F0F1E),
+                tonalElevation = 0.dp,
+                dragHandle = {
+                    Box(
+                        modifier = Modifier
+                            .padding(vertical = 12.dp)
+                            .width(40.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color.White.copy(alpha = 0.2f))
+                    )
+                }
             ) {
                 AddExpenseBottomSheet(
                     repository = repository,
@@ -76,7 +146,9 @@ private fun MainAppContent(repository: BudgetRepository) {
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -105,7 +177,13 @@ private fun MainAppContent(repository: BudgetRepository) {
                 TipsScreen()
             }
             composable(Screen.Settings.route) {
-                SettingsScreen(repository = repository)
+                SettingsScreen(
+                    repository = repository,
+                    onLogout = {
+                        repository.logout()
+                        onLogout()
+                    }
+                )
             }
             composable(Screen.AllExpenses.route) {
                 AllExpensesScreen(

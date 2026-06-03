@@ -1,33 +1,37 @@
 package com.example.budgetbruprog7313.ui
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.theme.*
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(repository: BudgetRepository) {
+fun SettingsScreen(
+    repository: BudgetRepository,
+    onLogout: () -> Unit          // wired from MainAppContent
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var notificationsEnabled by remember { mutableStateOf(true) }
@@ -35,11 +39,13 @@ fun SettingsScreen(repository: BudgetRepository) {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showRateDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(DarkBackground)
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         // Header
@@ -71,16 +77,8 @@ fun SettingsScreen(repository: BudgetRepository) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Preferences Section
-        Text(
-            "PREFERENCES",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = BudgetBruPrimary,
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-        )
-
+        // ── PREFERENCES ───────────────────────────────────────────────────────
+        SectionLabel("PREFERENCES")
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -102,9 +100,7 @@ fun SettingsScreen(repository: BudgetRepository) {
                         )
                     }
                 )
-
-                Divider(color = Color.Gray.copy(alpha = 0.2f))
-
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                 SettingsItem(
                     icon = Icons.Default.DarkMode,
                     title = "Dark Mode",
@@ -112,7 +108,7 @@ fun SettingsScreen(repository: BudgetRepository) {
                     trailing = {
                         Switch(
                             checked = true,
-                            onCheckedChange = { },
+                            onCheckedChange = {},
                             enabled = false,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = BudgetBruPrimary,
@@ -126,16 +122,8 @@ fun SettingsScreen(repository: BudgetRepository) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Data Management Section
-        Text(
-            "DATA MANAGEMENT",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = BudgetBruPrimary,
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-        )
-
+        // ── DATA MANAGEMENT ───────────────────────────────────────────────────
+        SectionLabel("DATA MANAGEMENT")
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -150,13 +138,11 @@ fun SettingsScreen(repository: BudgetRepository) {
                     textColor = BudgetBruAccent,
                     onClick = { showClearDataDialog = true }
                 )
-
-                Divider(color = Color.Gray.copy(alpha = 0.2f))
-
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                 SettingsItem(
                     icon = Icons.Default.Refresh,
                     title = "Reset Settings",
-                    subtitle = "Reset all settings to default",
+                    subtitle = "Reset income and goals to defaults",
                     onClick = { showResetDialog = true }
                 )
             }
@@ -164,16 +150,27 @@ fun SettingsScreen(repository: BudgetRepository) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Support Section
-        Text(
-            "SUPPORT",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = BudgetBruPrimary,
-            letterSpacing = 1.sp,
-            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-        )
+        // ── ACCOUNT ───────────────────────────────────────────────────────────
+        SectionLabel("ACCOUNT")
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkCard)
+        ) {
+            SettingsItem(
+                icon = Icons.Default.Logout,
+                title = "Sign Out",
+                subtitle = "Sign out of your Firebase account",
+                iconTint = BudgetBruAccent,
+                textColor = BudgetBruAccent,
+                onClick = { showLogoutDialog = true }
+            )
+        }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // ── SUPPORT ───────────────────────────────────────────────────────────
+        SectionLabel("SUPPORT")
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -186,9 +183,7 @@ fun SettingsScreen(repository: BudgetRepository) {
                     subtitle = "Version 1.0.0",
                     onClick = { showAboutDialog = true }
                 )
-
-                Divider(color = Color.Gray.copy(alpha = 0.2f))
-
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                 SettingsItem(
                     icon = Icons.Default.Share,
                     title = "Share App",
@@ -196,24 +191,23 @@ fun SettingsScreen(repository: BudgetRepository) {
                     onClick = {
                         val shareIntent = Intent().apply {
                             action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, "Check out BudgetBru - the best budgeting app for students! Track expenses, set goals, and save money smartly. #BudgetBru")
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                "Check out BudgetBru - the smart budgeting app for students! #BudgetBru"
+                            )
                             type = "text/plain"
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "Share BudgetBru via"))
                     }
                 )
-
-                Divider(color = Color.Gray.copy(alpha = 0.2f))
-
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                 SettingsItem(
                     icon = Icons.Default.RateReview,
                     title = "Rate Us",
                     subtitle = "Rate BudgetBru on Play Store",
                     onClick = { showRateDialog = true }
                 )
-
-                Divider(color = Color.Gray.copy(alpha = 0.2f))
-
+                HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                 SettingsItem(
                     icon = Icons.Default.Email,
                     title = "Contact Support",
@@ -232,7 +226,7 @@ fun SettingsScreen(repository: BudgetRepository) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // App Info Footer
+        // Footer
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -242,18 +236,9 @@ fun SettingsScreen(repository: BudgetRepository) {
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    "BudgetBru",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruPrimary
-                )
+                Text("BudgetBru", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Smart Budgeting for Students",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text("Smart Budgeting for Students", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     "© 2024 BudgetBru. All rights reserved.",
@@ -264,93 +249,80 @@ fun SettingsScreen(repository: BudgetRepository) {
         }
     }
 
-    // Clear Data Confirmation Dialog
-    if (showClearDataDialog) {
+    // ── Dialogs ───────────────────────────────────────────────────────────────
+
+    if (showLogoutDialog) {
         AlertDialog(
-            onDismissRequest = { showClearDataDialog = false },
-            title = {
-                Text(
-                    "Clear All Data?",
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruAccent
-                )
-            },
-            text = {
-                Text("This will permanently delete all your expenses, categories, and goals. This action cannot be undone.")
-            },
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Sign Out?", fontWeight = FontWeight.Bold, color = BudgetBruAccent) },
+            text = { Text("You will need to sign in again to access your data.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        scope.launch {
-                            // Clear all data from repository
-                            // This would need to be implemented in the repository
-                            showClearDataDialog = false
-                            // Show a snackbar or toast
-                        }
+                        showLogoutDialog = false
+                        onLogout()
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = BudgetBruAccent)
-                ) {
-                    Text("Delete Everything")
-                }
+                ) { Text("Sign Out") }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDataDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Cancel") }
             },
             containerColor = DarkCard
         )
     }
 
-    // Reset Settings Dialog
-    if (showResetDialog) {
+    if (showClearDataDialog) {
         AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = {
-                Text(
-                    "Reset Settings?",
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruPrimary
-                )
-            },
-            text = {
-                Text("This will reset all your preferences to default values.")
-            },
+            onDismissRequest = { showClearDataDialog = false },
+            title = { Text("Clear All Data?", fontWeight = FontWeight.Bold, color = BudgetBruAccent) },
+            text = { Text("This permanently deletes all your expenses, categories, and goals. This cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         scope.launch {
-                            // Reset settings
+                            repository.clearSettings()
+                            showClearDataDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = BudgetBruAccent)
+                ) { Text("Delete Everything") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDataDialog = false }) { Text("Cancel") }
+            },
+            containerColor = DarkCard
+        )
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Reset Settings?", fontWeight = FontWeight.Bold, color = BudgetBruPrimary) },
+            text = { Text("This will reset your income to R5000 and clear your goals.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
                             repository.saveGoals(0.0, 0.0)
                             repository.saveMonthlyIncome(5000.0)
                             notificationsEnabled = true
                             showResetDialog = false
                         }
                     }
-                ) {
-                    Text("Reset", color = BudgetBruPrimary)
-                }
+                ) { Text("Reset", color = BudgetBruPrimary) }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
             },
             containerColor = DarkCard
         )
     }
 
-    // About Dialog
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = {
-                Text(
-                    "About BudgetBru",
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruPrimary
-                )
-            },
+            title = { Text("About BudgetBru", fontWeight = FontWeight.Bold, color = BudgetBruPrimary) },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -363,33 +335,19 @@ fun SettingsScreen(repository: BudgetRepository) {
                         tint = BudgetBruPrimary
                     )
                     Spacer(modifier = Modifier.height(16.dp))
+                    Text("BudgetBru", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
+                    Text("Version 1.0.0", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        "BudgetBru",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BudgetBruPrimary
-                    )
-                    Text(
-                        "Version 1.0.0",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "A smart budgeting app designed for students to track expenses, set financial goals, and manage money effectively.",
+                        "A smart budgeting app for students to track expenses, set goals, and manage money effectively.",
                         fontSize = 14.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "Features:",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         "• Expense Tracking with Photos\n• Category Management\n• Monthly Goals & Budgeting\n• Spending Reports\n• IOU Tracker\n• Budgeting Tips",
                         fontSize = 12.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 }
             },
@@ -402,42 +360,42 @@ fun SettingsScreen(repository: BudgetRepository) {
         )
     }
 
-    // Rate Dialog
     if (showRateDialog) {
         AlertDialog(
             onDismissRequest = { showRateDialog = false },
-            title = {
-                Text(
-                    "Enjoying BudgetBru?",
-                    fontWeight = FontWeight.Bold,
-                    color = BudgetBruPrimary
-                )
-            },
-            text = {
-                Text("If you like using BudgetBru, please take a moment to rate us on the Play Store. Your support helps us improve!")
-            },
+            title = { Text("Enjoying BudgetBru?", fontWeight = FontWeight.Bold, color = BudgetBruPrimary) },
+            text = { Text("Please take a moment to rate us on the Play Store!") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showRateDialog = false
-                        // Open Play Store link when available
                         val intent = Intent(Intent.ACTION_VIEW).apply {
                             data = Uri.parse("https://play.google.com/store/apps/details?id=com.example.budgetbruprog7313")
                         }
                         context.startActivity(intent)
                     }
-                ) {
-                    Text("Rate Now", color = BudgetBruPrimary)
-                }
+                ) { Text("Rate Now", color = BudgetBruPrimary) }
             },
             dismissButton = {
-                TextButton(onClick = { showRateDialog = false }) {
-                    Text("Maybe Later")
-                }
+                TextButton(onClick = { showRateDialog = false }) { Text("Maybe Later") }
             },
             containerColor = DarkCard
         )
     }
+}
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        color = BudgetBruPrimary,
+        letterSpacing = 1.sp,
+        modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+    )
 }
 
 @Composable
@@ -457,7 +415,6 @@ fun SettingsItem(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon
         Surface(
             modifier = Modifier.size(40.dp),
             shape = RoundedCornerShape(10.dp),
@@ -472,30 +429,14 @@ fun SettingsItem(
                 )
             }
         }
-
         Spacer(modifier = Modifier.width(16.dp))
-
-        // Text
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                fontWeight = FontWeight.Medium,
-                color = textColor,
-                fontSize = 16.sp
-            )
+            Text(title, fontWeight = FontWeight.Medium, color = textColor, fontSize = 16.sp)
             if (subtitle != null) {
-                Text(
-                    subtitle,
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.5f)
-                )
+                Text(subtitle, fontSize = 12.sp, color = Color.White.copy(alpha = 0.5f))
             }
         }
-
-        // Trailing content (Switch, etc.)
         trailing?.invoke()
-
-        // Chevron for clickable items without custom trailing
         if (onClick != null && trailing == null) {
             Icon(
                 Icons.Default.ChevronRight,

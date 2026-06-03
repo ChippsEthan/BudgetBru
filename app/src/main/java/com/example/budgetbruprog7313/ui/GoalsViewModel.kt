@@ -2,7 +2,6 @@ package com.example.budgetbruprog7313.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.budgetbruprog7313.data.model.Settings
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -37,36 +36,35 @@ class GoalsViewModel(
     private val _successMessageText = MutableStateFlow("")
     val successMessageText: StateFlow<String> = _successMessageText.asStateFlow()
 
-    private fun getCurrentMonthRange(): Pair<Date, Date> {
+    private fun getCurrentMonthRange(): Pair<Long, Long> {
         val calendar = Calendar.getInstance()
-        val start = calendar.apply {
+        val startMillis = calendar.apply {
             set(Calendar.DAY_OF_MONTH, 1)
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-        }.time
-        val end = calendar.apply {
+        }.timeInMillis
+        val endMillis = calendar.apply {
             set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
             set(Calendar.HOUR_OF_DAY, 23)
             set(Calendar.MINUTE, 59)
             set(Calendar.SECOND, 59)
             set(Calendar.MILLISECOND, 999)
-        }.time
-        return Pair(start, end)
+        }.timeInMillis
+        return Pair(startMillis, endMillis)
     }
 
     init {
         viewModelScope.launch {
-            // Load current month spending
             val (start, end) = getCurrentMonthRange()
+            // Long millis passed directly
             repository.getEntriesBetweenDates(start, end).collect { entries ->
                 _currentMonthTotal.value = entries.sumOf { it.amount }
             }
         }
 
         viewModelScope.launch {
-            // Load goals
             repository.getGoals().collect { settings ->
                 _currentMin.value = settings?.minMonthlyGoal
                 _currentMax.value = settings?.maxMonthlyGoal
@@ -75,7 +73,6 @@ class GoalsViewModel(
         }
 
         viewModelScope.launch {
-            // Load income
             repository.getMonthlyIncome().collect { income ->
                 _currentIncome.value = income ?: 5000.0
             }

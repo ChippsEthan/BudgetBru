@@ -1,6 +1,5 @@
 package com.example.budgetbruprog7313.ui
 
-import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -47,7 +46,7 @@ fun AddExpenseBottomSheet(
     var amount by remember { mutableStateOf("") }
     var startTime by remember { mutableStateOf("") }
     var endTime by remember { mutableStateOf("") }
-    var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
+    var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
@@ -56,27 +55,23 @@ fun AddExpenseBottomSheet(
     var showPhotoDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    // Camera launcher
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            // Photo was saved successfully
-            println("Photo saved successfully to: $photoPath")
+            println("Photo saved to: $photoPath")
         } else {
-            // Photo capture failed
             photoPath = null
             errorMessage = "Failed to capture photo"
         }
     }
 
-    // Load categories
     LaunchedEffect(Unit) {
         repository.allCategories.collect { categoryList ->
             categories = categoryList
             isLoading = false
             if (selectedCategoryId == null && categoryList.isNotEmpty()) {
-                selectedCategoryId = categoryList.first().id
+                selectedCategoryId = categoryList.first().id  // String ID
             }
         }
     }
@@ -87,10 +82,13 @@ fun AddExpenseBottomSheet(
             .padding(24.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text("Add Expense", style = MaterialTheme.typography.headlineSmall, color = BudgetBruPrimary)
+        Text(
+            "Add Expense",
+            style = MaterialTheme.typography.headlineSmall,
+            color = BudgetBruPrimary
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Description
         OutlinedTextField(
             value = description,
             onValueChange = { description = it; errorMessage = null },
@@ -107,7 +105,6 @@ fun AddExpenseBottomSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Amount
         OutlinedTextField(
             value = amount,
             onValueChange = { amount = it; errorMessage = null },
@@ -125,7 +122,6 @@ fun AddExpenseBottomSheet(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Start Time
         OutlinedTextField(
             value = startTime,
             onValueChange = { startTime = it },
@@ -133,12 +129,17 @@ fun AddExpenseBottomSheet(
             placeholder = { Text("e.g., 14:30") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = null, tint = BudgetBruPrimary) }
+            leadingIcon = {
+                Icon(
+                    Icons.Default.AccessTime,
+                    contentDescription = null,
+                    tint = BudgetBruPrimary
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // End Time
         OutlinedTextField(
             value = endTime,
             onValueChange = { endTime = it },
@@ -146,19 +147,28 @@ fun AddExpenseBottomSheet(
             placeholder = { Text("e.g., 15:30") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.AccessTime, contentDescription = null, tint = BudgetBruPrimary) }
+            leadingIcon = {
+                Icon(
+                    Icons.Default.AccessTime,
+                    contentDescription = null,
+                    tint = BudgetBruPrimary
+                )
+            }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Category Selection
-        Text("Category *", style = MaterialTheme.typography.labelMedium, color = BudgetBruPrimary)
+        Text(
+            "Category *",
+            style = MaterialTheme.typography.labelMedium,
+            color = BudgetBruPrimary
+        )
 
         if (isLoading) {
             CircularProgressIndicator(modifier = Modifier.padding(8.dp))
         } else if (categories.isEmpty()) {
             Text(
-                "No categories found. Please add categories in the Categories screen.",
+                "No categories found. Please add categories first.",
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(8.dp)
             )
@@ -166,7 +176,7 @@ fun AddExpenseBottomSheet(
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(categories) { category ->
                     FilterChip(
-                        selected = selectedCategoryId == category.id,
+                        selected = selectedCategoryId == category.id,  // String comparison
                         onClick = { selectedCategoryId = category.id },
                         label = { Text(category.name) },
                         enabled = !isSaving,
@@ -188,15 +198,17 @@ fun AddExpenseBottomSheet(
             colors = CardDefaults.cardColors(containerColor = DarkCard)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("Optional Photo", style = MaterialTheme.typography.labelMedium, color = BudgetBruSecondary)
+                Text(
+                    "Optional Photo",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = BudgetBruSecondary
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Updated Camera Button with error handling
                     Button(
                         onClick = {
                             try {
@@ -211,17 +223,17 @@ fun AddExpenseBottomSheet(
                                 }
                             } catch (e: Exception) {
                                 errorMessage = "Camera error: ${e.message}"
-                                e.printStackTrace()
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = BudgetBruSecondary),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BudgetBruSecondary
+                        ),
                         enabled = !isSaving
                     ) {
                         Icon(Icons.Default.Camera, contentDescription = "Camera")
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(if (photoPath != null) "Change Photo" else "Take Photo")
                     }
-
                     if (photoPath != null) {
                         Text("Photo saved", color = BudgetBruPrimary, fontSize = 12.sp)
                     }
@@ -276,7 +288,6 @@ fun AddExpenseBottomSheet(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -303,15 +314,15 @@ fun AddExpenseBottomSheet(
                             isSaving = true
                             scope.launch {
                                 try {
-                                    val now = Date()
                                     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+                                    val nowMillis = System.currentTimeMillis() // Date() → millis
                                     repository.addExpenseEntry(
-                                        date = now,
+                                        dateMillis = nowMillis,
                                         startTime = startTime,
                                         endTime = endTime,
                                         description = description,
                                         amount = amt,
-                                        categoryId = selectedCategoryId!!,
+                                        categoryId = selectedCategoryId!!, // String
                                         photoPath = photoPath
                                     )
                                     onExpenseAdded()
@@ -328,7 +339,10 @@ fun AddExpenseBottomSheet(
                 colors = ButtonDefaults.buttonColors(containerColor = BudgetBruPrimary)
             ) {
                 if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = Color.White
+                    )
                 } else {
                     Text("Save Expense")
                 }
@@ -336,11 +350,8 @@ fun AddExpenseBottomSheet(
         }
     }
 
-    // Photo View Dialog
     if (showPhotoDialog && photoPath != null) {
-        Dialog(
-            onDismissRequest = { showPhotoDialog = false }
-        ) {
+        Dialog(onDismissRequest = { showPhotoDialog = false }) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -352,7 +363,11 @@ fun AddExpenseBottomSheet(
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Receipt Photo", style = MaterialTheme.typography.titleMedium, color = BudgetBruPrimary)
+                    Text(
+                        "Receipt Photo",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = BudgetBruPrimary
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
                     Image(
                         painter = rememberAsyncImagePainter(photoPath),

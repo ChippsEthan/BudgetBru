@@ -32,13 +32,19 @@ val BudgetBruPrimary = Color(0xFF6366F1)
 val BudgetBruSecondary = Color(0xFFA855F7)
 val DarkDockBg = Color(0xFF0F172A).copy(alpha = 0.96f)
 
-// --- SCREEN DEFINITIONS (Defined here to prevent "Unresolved Screen" errors) ---
+// --- SCREEN DEFINITIONS ---
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object Home : Screen("home", "Home", Icons.Default.Home)
     data object Expenses : Screen("expenses", "Reports", Icons.Default.List)
     data object Goals : Screen("goals", "Goals", Icons.Default.Flag)
     data object ManageCategories : Screen("manage_categories", "Categories", Icons.Default.Category)
     data object More : Screen("more", "More", Icons.Default.MoreVert)
+
+    // Additional screens (not shown in bottom bar but used for navigation)
+    data object IOU : Screen("iou", "IOU Tracker", Icons.Default.People)
+    data object Tips : Screen("tips", "Budgeting Tips", Icons.Default.Lightbulb)
+    data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+    data object AllExpenses : Screen("all_expenses", "All Expenses", Icons.Default.Receipt)
 }
 
 @Composable
@@ -70,9 +76,7 @@ fun InnovativeBottomBar(navController: NavController) {
                 .clip(RoundedCornerShape(32.dp))
                 .background(DarkDockBg)
         ) {
-            // --- BOXWITHCONSTRAINTS SCOPE ACTIVATED ---
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                // Using 'this.' ensures the compiler sees we are using the scope
                 val totalWidth = this.maxWidth
                 val itemWidth = totalWidth / items.size
                 val pillWidth = itemWidth * 0.70f

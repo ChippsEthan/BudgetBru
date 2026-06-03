@@ -20,77 +20,80 @@ class HomeViewModel(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    // Force refresh trigger
     private val _refreshTrigger = MutableStateFlow(0)
 
-    // Get all expenses from database
+    // All expenses: epoch 0 to now
     private val allExpenses: Flow<List<ExpenseEntry>> = _refreshTrigger.flatMapLatest {
-        repository.getEntriesBetweenDates(Date(0), Date())
+        repository.getEntriesBetweenDates(0L, System.currentTimeMillis())
     }.catch { emit(emptyList()) }
 
-    // Get all incomes from database
     private val allIncomes: Flow<List<IncomeEntry>> = _refreshTrigger.flatMapLatest {
         repository.getAllIncomes()
     }.catch { emit(emptyList()) }
 
-    // Combined recent activity (expenses + income)
     val recentActivity: StateFlow<List<Transaction>> = combine(
         allExpenses,
         allIncomes
     ) { expenses, incomes ->
         val expenseTransactions = expenses.map { expense ->
             Transaction.Expense(
-                id = expense.id,
-                amount = expense.amount,
+                id          = expense.id,
+                amount      = expense.amount,
                 description = expense.description,
-                date = expense.date,
-                categoryId = expense.categoryId,
+                date        = expense.date,        // Long
+                categoryId  = expense.categoryId,  // String
                 categoryName = "",
-                startTime = expense.startTime,
-                endTime = expense.endTime,
-                photoPath = expense.photoPath
+                startTime   = expense.startTime,
+                endTime     = expense.endTime,
+                photoPath   = expense.photoPath
             )
         }
         val incomeTransactions = incomes.map { income ->
             Transaction.Income(
-                id = income.id,
-                amount = income.amount,
+                id          = income.id,
+                amount      = income.amount,
                 description = income.description,
-                date = income.date,
-                source = income.source
+                date        = income.date,  // Long
+                source      = income.source
             )
         }
-        (expenseTransactions + incomeTransactions).sortedByDescending { it.date }.take(15)
+        (expenseTransactions + incomeTransactions)
+            .sortedByDescending { it.date }
+            .take(15)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    private fun getCurrentMonthRange(): Pair<Date, Date> {
+    private fun getCurrentMonthRange(): Pair<Long, Long> {
         val calendar = Calendar.getInstance()
-        val startDate = calendar.apply {
+        val startMillis = calendar.apply {
             set(Calendar.DAY_OF_MONTH, 1)
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-        }.time
+        }.timeInMillis
 
-        val endDate = calendar.apply {
+        val endMillis = calendar.apply {
             set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
             set(Calendar.HOUR_OF_DAY, 23)
             set(Calendar.MINUTE, 59)
             set(Calendar.SECOND, 59)
             set(Calendar.MILLISECOND, 999)
-        }.time
+        }.timeInMillis
 
-        return Pair(startDate, endDate)
+        return Pair(startMillis, endMillis)
     }
 
     private val currentMonthRange = getCurrentMonthRange()
+
     private val currentMonthExpenses: Flow<List<ExpenseEntry>> = _refreshTrigger.flatMapLatest {
-        repository.getEntriesBetweenDates(currentMonthRange.first, currentMonthRange.second)
+        repository.getEntriesBetweenDates(
+            currentMonthRange.first,
+            currentMonthRange.second
+        )
     }
 
     val totalSpent: StateFlow<Double> = currentMonthExpenses
@@ -127,18 +130,19 @@ class HomeViewModel(
         }
     }
 
-    fun addQuickExpense(amount: Double, description: String, categoryId: Long) {
+    fun addQuickExpense(amount: Double, description: String, categoryId: String) { // String ID
         viewModelScope.launch {
-            val now = Date()
+            val nowMillis = System.currentTimeMillis()
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val timeStr = timeFormat.format(Date(nowMillis))
             repository.addExpenseEntry(
-                date = now,
-                startTime = timeFormat.format(now),
-                endTime = timeFormat.format(now),
+                dateMillis  = nowMillis,
+                startTime   = timeStr,
+                endTime     = timeStr,
                 description = description,
-                amount = amount,
-                categoryId = categoryId,
-                photoPath = null
+                amount      = amount,
+                categoryId  = categoryId,
+                photoPath   = null
             )
             refresh()
         }
@@ -146,16 +150,15 @@ class HomeViewModel(
 
     fun addIncome(amount: Double, description: String) {
         viewModelScope.launch {
-            val now = Date()
+            val nowMillis = System.currentTimeMillis()
             val incomeEntry = IncomeEntry(
-                amount = amount,
+                amount      = amount,
                 description = description.ifBlank { "Income Added" },
-                date = now,
-                source = "Manual"
+                date        = nowMillis,  // Long
+                source      = "Manual"
             )
             repository.addIncomeEntry(incomeEntry)
 
-            // Also update the monthly income setting
             val currentIncome = repository.getMonthlyIncome().first()
             val newIncome = (currentIncome ?: 5000.0) + amount
             repository.saveMonthlyIncome(newIncome)
@@ -164,7 +167,7 @@ class HomeViewModel(
         }
     }
 
-    fun deleteIncome(incomeId: Long) {
+    fun deleteIncome(incomeId: String) {  // String ID
         viewModelScope.launch {
             repository.deleteIncomeById(incomeId)
             refresh()

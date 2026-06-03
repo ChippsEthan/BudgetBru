@@ -70,7 +70,7 @@ fun TipCalculatorDialog(onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1E1E2F), // matches your dark card background
+        containerColor = Color(0xFF1E1E2F),
         title = {
             Text(
                 "Tip Calculator",
@@ -84,7 +84,6 @@ fun TipCalculatorDialog(onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Bill input
                 OutlinedTextField(
                     value = billAmount,
                     onValueChange = { billAmount = it.filter { char -> char.isDigit() || char == '.' } },
@@ -100,7 +99,6 @@ fun TipCalculatorDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Tip percentage selector
                 Text("Tip percentage: ${tipPercent.toInt()}%", color = Color.White)
                 Slider(
                     value = tipPercent,
@@ -115,7 +113,6 @@ fun TipCalculatorDialog(onDismiss: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Results card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -361,7 +358,7 @@ fun ExpenseDetailDialog(
                     DetailItem("Amount", "R${String.format("%.2f", expense.amount)}", BudgetBruAccent)
                     DetailItem("Start Time", expense.startTime, Color.White.copy(alpha = 0.8f))
                     DetailItem("End Time", expense.endTime, Color.White.copy(alpha = 0.8f))
-                    DetailItem("Date", dateFormat.format(expense.date), Color.White.copy(alpha = 0.8f))
+                    DetailItem("Date", dateFormat.format(Date(expense.date)), Color.White.copy(alpha = 0.8f))
                     DetailItem("Category", categories.find { it.id == expense.categoryId }?.name ?: "Unknown", BudgetBruSecondary)
 
                     if (expense.photoPath != null && File(expense.photoPath).exists()) {
@@ -502,14 +499,13 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
     var showScanReceiptSnackbar by remember { mutableStateOf(false) }
     var selectedExpense by remember { mutableStateOf<ExpenseEntry?>(null) }
 
-    // NEW: State for Tip Calculator dialog
     var showTipDialog by remember { mutableStateOf(false) }
 
     val configuration = LocalConfiguration.current
     val currentLocale = remember(configuration) { configuration.locales[0] ?: Locale.getDefault() }
 
     val dateFormat = remember(currentLocale) { SimpleDateFormat("EEEE, dd MMMM yyyy", currentLocale) }
-    val currentDate = remember(dateFormat) { dateFormat.format(Date()) }
+    val currentDate = remember(dateFormat) { dateFormat.format(Date(System.currentTimeMillis())) }
     val greeting = remember {
         when (Calendar.getInstance().get(Calendar.HOUR_OF_DAY)) {
             in 0..11 -> "Good Morning"
@@ -538,11 +534,9 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                     }
                 },
                 actions = {
-                    // NEW: Tip Calculator button
                     IconButton(onClick = { showTipDialog = true }) {
                         Icon(Icons.Default.Calculate, contentDescription = "Tip Calculator")
                     }
-                    // Existing Settings button
                     IconButton(onClick = { /* TODO: Settings */ }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }
@@ -563,7 +557,6 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
             modifier = Modifier.fillMaxSize().background(DarkBackground).verticalScroll(scrollState).padding(paddingValues).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Date Card
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
                 Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -574,13 +567,12 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                     Surface(shape = CircleShape, color = BudgetBruPrimary.copy(alpha = 0.2f), modifier = Modifier.size(36.dp)) {
                         Box(contentAlignment = Alignment.Center) {
                             val dayFormat = remember(currentLocale) { SimpleDateFormat("dd", currentLocale) }
-                            Text(dayFormat.format(Date()), fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
+                            Text(dayFormat.format(Date(System.currentTimeMillis())), fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
                         }
                     }
                 }
             }
 
-            // Balance Card
             Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), elevation = CardDefaults.cardElevation(8.dp)) {
                 Box(modifier = Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(BudgetBruPrimary, BudgetBruSecondary, Color(0xFF6B21A5)))).padding(24.dp)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -596,23 +588,19 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                 }
             }
 
-            // Stats Row
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 QuickStatCard("Monthly Spent", "R ${String.format("%,.2f", totalSpent)}", Icons.AutoMirrored.Filled.TrendingDown, BudgetBruAccent, if (availableBalance + totalSpent > 0) (totalSpent / (availableBalance + totalSpent) * 100).toInt() else 0, Modifier.weight(1f))
                 QuickStatCard("Monthly Budget", "R ${String.format("%,.2f", availableBalance + totalSpent)}", Icons.Default.AccountBalanceWallet, BudgetBruSecondary, 100, Modifier.weight(1f))
             }
 
-            // Quick Add Section
             Text("Quick Add Expense", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
 
-            // Amount chips
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
                 items(listOf(20.0, 50.0, 100.0, 200.0, 500.0)) { amount ->
                     FilterChip(selected = selectedQuickAmount == amount, onClick = { selectedQuickAmount = amount }, label = { Text("R${amount.toInt()}") }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BudgetBruPrimary, selectedLabelColor = Color.White))
                 }
             }
 
-            // Category chips
             if (categories.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) {
                     items(categories.take(8)) { category ->
@@ -624,13 +612,11 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                 }
             }
 
-            // Recent Activity Header
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("Recent Activity", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 TextButton(onClick = onViewAllClick) { Text("View All", color = BudgetBruPrimary) }
             }
 
-            // Recent Activity List with click to show details
             if (isLoading) {
                 repeat(3) { ShimmerCard(); Spacer(Modifier.height(8.dp)) }
             } else if (recentActivity.isEmpty()) {
@@ -666,7 +652,7 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                             onClick = {
                                 if (transaction is Transaction.Expense) {
                                     scope.launch {
-                                        val expenses = repository.getEntriesBetweenDates(Date(0), Date()).first()
+                                        val expenses = repository.getEntriesBetweenDates(0L, System.currentTimeMillis()).first()
                                         selectedExpense = expenses.find { it.id == transaction.id }
                                     }
                                 }
@@ -680,7 +666,6 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
         }
     }
 
-    // Delete Expense Confirmation Dialog
     if (showDeleteConfirmation && expenseToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false; expenseToDelete = null },
@@ -710,14 +695,14 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
     if (showAddExpenseDialog) {
         var customAmount by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
-        var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
+        var selectedCategoryId by remember { mutableStateOf<String?>(null) }
         var startTime by remember { mutableStateOf("") }
         var endTime by remember { mutableStateOf("") }
         var photoPath by remember { mutableStateOf<String?>(null) }
         var showPhotoPreview by remember { mutableStateOf(false) }
 
         val context = LocalContext.current
-        val currentTime = remember(currentLocale) { SimpleDateFormat("HH:mm", currentLocale).format(Date()) }
+        val currentTime = remember(currentLocale) { SimpleDateFormat("HH:mm", currentLocale).format(Date(System.currentTimeMillis())) }
 
         val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success -> if (!success) photoPath = null }
         val cameraPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -782,7 +767,15 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                         val finalEndTime = if (endTime.isBlank()) currentTime else endTime
                         if (description.isNotBlank() && amt != null && selectedCategoryId != null && amt > 0) {
                             scope.launch {
-                                repository.addExpenseEntry(Date(), finalStartTime, finalEndTime, description, amt, selectedCategoryId!!, photoPath)
+                                repository.addExpenseEntry(
+                                    dateMillis = System.currentTimeMillis(),
+                                    startTime = finalStartTime,
+                                    endTime = finalEndTime,
+                                    description = description,
+                                    amount = amt,
+                                    categoryId = selectedCategoryId!!,
+                                    photoPath = photoPath
+                                )
                                 showAddExpenseDialog = false
                                 viewModel.refresh()
                                 snackbarHostState.showSnackbar("✅ Expense added!")
@@ -853,7 +846,6 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
             categories = categories,
             onUpdate = { updatedExpense ->
                 scope.launch {
-                    // Since there's no direct update method, we show a message
                     snackbarHostState.showSnackbar("Edit functionality - Update would be saved here")
                     viewModel.refresh()
                 }
@@ -872,7 +864,6 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
         )
     }
 
-    // NEW: Tip Calculator dialog
     if (showTipDialog) {
         TipCalculatorDialog(onDismiss = { showTipDialog = false })
     }
@@ -975,7 +966,7 @@ fun TransactionCard(
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(transaction.description, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White)
-                    Text(dateTimeFormat.format(transaction.date), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(dateTimeFormat.format(Date(transaction.date)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (isExpense && (transaction as Transaction.Expense).categoryName.isNotBlank()) {
                         Text((transaction as Transaction.Expense).categoryName, style = MaterialTheme.typography.labelSmall, color = BudgetBruSecondary)
                     }

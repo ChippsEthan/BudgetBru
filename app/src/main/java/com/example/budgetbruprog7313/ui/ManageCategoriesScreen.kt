@@ -12,21 +12,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.budgetbruprog7313.data.model.Category
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.theme.DarkBackground
 import com.example.budgetbruprog7313.ui.theme.DarkCard
 import kotlinx.coroutines.launch
-import com.example.budgetbruprog7313.data.database.AppDatabase
 
 @Composable
 fun ManageCategoriesScreen() {
-    val context = LocalContext.current
-    val repository = remember {
-        BudgetRepository(AppDatabase.getDatabase(context))
-    }
+    // Zero-argument now — no AppDatabase reference
+    val repository = remember { BudgetRepository() }
     val scope = rememberCoroutineScope()
 
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
@@ -34,7 +30,6 @@ fun ManageCategoriesScreen() {
     var showAddDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Load categories from database
     LaunchedEffect(Unit) {
         repository.allCategories.collect { categoryList ->
             categories = categoryList
@@ -87,9 +82,7 @@ fun ManageCategoriesScreen() {
                     CategoryItem(
                         category = category,
                         onDelete = {
-                            scope.launch {
-                                repository.deleteCategory(category)
-                            }
+                            scope.launch { repository.deleteCategory(category) }
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -98,7 +91,6 @@ fun ManageCategoriesScreen() {
         }
     }
 
-    // Add Category Dialog
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -122,14 +114,10 @@ fun ManageCategoriesScreen() {
                             }
                         }
                     }
-                ) {
-                    Text("Add")
-                }
+                ) { Text("Add") }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -149,10 +137,7 @@ fun CategoryItem(category: Category, onDelete: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = category.name,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text(category.name, style = MaterialTheme.typography.bodyLarge)
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,

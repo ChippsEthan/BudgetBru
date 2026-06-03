@@ -25,7 +25,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -44,16 +43,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ─── Colour Palette ───────────────────────────────────────────────────────────
-private val DeepSpace      = Color(0xFF07070F)   // page background
-private val SurfaceGlass   = Color(0xFF0F0F1E)   // card / field surface
-private val BrandIndigo    = Color(0xFF6366F1)   // primary accent
-private val BrandEmerald   = Color(0xFF10B981)   // secondary accent
-private val BrandPink      = Color(0xFFEC4899)   // tertiary glow
-private val OnSurfaceDim   = Color(0x99FFFFFF)   // 60 % white
-private val OnSurfaceFaint = Color(0x40FFFFFF)   // 25 % white
+private val DeepSpace      = Color(0xFF07070F)
+private val SurfaceGlass   = Color(0xFF0F0F1E)
+private val BrandIndigo    = Color(0xFF6366F1)
+private val BrandEmerald   = Color(0xFF10B981)
+private val BrandPink      = Color(0xFFEC4899)
+private val OnSurfaceDim   = Color(0x99FFFFFF)
+private val OnSurfaceFaint = Color(0x40FFFFFF)
 private val ErrorRed       = Color(0xFFFC5C7D)
 
-// Gradient helpers
 private val brandGradient = Brush.linearGradient(
     colors = listOf(BrandIndigo, BrandEmerald)
 )
@@ -68,27 +66,27 @@ fun LoginScreen(
     repository: BudgetRepository
 ) {
     // ── State ─────────────────────────────────────────────────────────────────
-    var username      by remember { mutableStateOf("") }
-    var password      by remember { mutableStateOf("") }
+    var email           by remember { mutableStateOf("") }
+    var password        by remember { mutableStateOf("") }
+    var isRegistering   by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
-    var errorMessage  by remember { mutableStateOf<String?>(null) }
-    var isLoading     by remember { mutableStateOf(false) }
-    var loginJob      by remember { mutableStateOf<Job?>(null) }
+    var errorMessage    by remember { mutableStateOf<String?>(null) }
+    var isLoading       by remember { mutableStateOf(false) }
+    var loginJob        by remember { mutableStateOf<Job?>(null) }
 
-    var usernameFocused by remember { mutableStateOf(false) }
+    var emailFocused    by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
     val passwordFocusRequester = remember { FocusRequester() }
 
-    // Auto-clear error
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) { delay(3500); errorMessage = null }
     }
     DisposableEffect(Unit) { onDispose { loginJob?.cancel() } }
 
-    // ── Animated orb pulse ────────────────────────────────────────────────────
+    // ── Animations ────────────────────────────────────────────────────────────
     val infiniteTransition = rememberInfiniteTransition(label = "orbs")
     val orbPulse by infiniteTransition.animateFloat(
         initialValue = 0.85f, targetValue = 1f,
@@ -105,7 +103,6 @@ fun LoginScreen(
         ), label = "orbShift"
     )
 
-    // ── Entry animation ───────────────────────────────────────────────────────
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { delay(80); visible = true }
     val cardAlpha  by animateFloatAsState(if (visible) 1f else 0f,
@@ -113,53 +110,34 @@ fun LoginScreen(
     val cardOffset by animateFloatAsState(if (visible) 0f else 60f,
         tween(600, easing = FastOutSlowInEasing), label = "cardOffset")
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ROOT: Deep-space background with dynamic orbs
-    // ─────────────────────────────────────────────────────────────────────────
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(DeepSpace)
     ) {
-        // Decorative grid lines
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawGrid(this)
-        }
+        Canvas(modifier = Modifier.fillMaxSize()) { drawGrid(this) }
 
-        // Glowing orbs
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width; val h = size.height
-            // Indigo orb – top-left
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(
-                        BrandIndigo.copy(alpha = 0.30f * orbPulse),
-                        Color.Transparent
-                    ),
+                    colors = listOf(BrandIndigo.copy(alpha = 0.30f * orbPulse), Color.Transparent),
                     radius = w * 0.55f
                 ),
                 radius = w * 0.55f,
                 center = Offset(w * (0.1f + orbShift * 0.08f), h * 0.18f)
             )
-            // Emerald orb – bottom-right
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(
-                        BrandEmerald.copy(alpha = 0.20f * orbPulse),
-                        Color.Transparent
-                    ),
+                    colors = listOf(BrandEmerald.copy(alpha = 0.20f * orbPulse), Color.Transparent),
                     radius = w * 0.45f
                 ),
                 radius = w * 0.45f,
                 center = Offset(w * 0.85f, h * 0.78f)
             )
-            // Pink orb – mid accent
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(
-                        BrandPink.copy(alpha = 0.12f),
-                        Color.Transparent
-                    ),
+                    colors = listOf(BrandPink.copy(alpha = 0.12f), Color.Transparent),
                     radius = w * 0.30f
                 ),
                 radius = w * 0.30f,
@@ -167,7 +145,6 @@ fun LoginScreen(
             )
         }
 
-        // ── Scrollable content ────────────────────────────────────────────────
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -175,13 +152,12 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // ── Brand header ─────────────────────────────────────────────────
+            // ── Brand header ──────────────────────────────────────────────────
             AnimatedVisibility(
                 visible = visible,
                 enter = fadeIn(tween(500)) + slideInVertically(tween(500)) { -40 }
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // Logo badge
                     Box(
                         modifier = Modifier
                             .size(64.dp)
@@ -196,10 +172,7 @@ fun LoginScreen(
                             modifier = Modifier.size(32.dp)
                         )
                     }
-
                     Spacer(Modifier.height(14.dp))
-
-                    // Gradient app name
                     Text(
                         text = "BudgetBru",
                         style = TextStyle(
@@ -209,9 +182,7 @@ fun LoginScreen(
                             letterSpacing = (-1).sp
                         )
                     )
-
                     Spacer(Modifier.height(4.dp))
-
                     Text(
                         text = "SMART BUDGETING FOR STUDENTS",
                         fontSize = 10.sp,
@@ -224,16 +195,12 @@ fun LoginScreen(
 
             Spacer(Modifier.height(36.dp))
 
-            // ── Login Card ───────────────────────────────────────────────────
+            // ── Card ──────────────────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .graphicsLayer {
-                        alpha = cardAlpha
-                        translationY = cardOffset
-                    }
+                    .graphicsLayer { alpha = cardAlpha; translationY = cardOffset }
             ) {
-                // Outer glow border
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -247,7 +214,7 @@ fun LoginScreen(
                                 )
                             )
                         )
-                        .padding(1.5.dp)  // border thickness
+                        .padding(1.5.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -257,33 +224,36 @@ fun LoginScreen(
                             .padding(28.dp),
                         verticalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
-
-                        // Heading
+                        // Heading — switches between Sign In / Create Account
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "Welcome back 👋",
+                                text = if (isRegistering) "Create account 🚀" else "Welcome back 👋",
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                                 letterSpacing = (-0.5).sp
                             )
                             Text(
-                                text = "Sign in to your account",
+                                text = if (isRegistering) "Sign up with your email"
+                                else "Sign in to your account",
                                 fontSize = 13.sp,
                                 color = OnSurfaceDim
                             )
                         }
 
-                        // ── Username field ────────────────────────────────────
+                        // ── Email field ───────────────────────────────────────
                         GlassTextField(
-                            value = username,
-                            onValueChange = { username = it; errorMessage = null },
-                            label = "Username",
-                            leadingIcon = Icons.Outlined.Person,
-                            isFocused = usernameFocused,
-                            onFocusChange = { usernameFocused = it },
+                            value = email,
+                            onValueChange = { email = it; errorMessage = null },
+                            label = "Email",
+                            leadingIcon = Icons.Outlined.Email,
+                            isFocused = emailFocused,
+                            onFocusChange = { emailFocused = it },
                             enabled = !isLoading,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
                             keyboardActions = KeyboardActions(
                                 onNext = { passwordFocusRequester.requestFocus() }
                             )
@@ -354,12 +324,12 @@ fun LoginScreen(
                             }
                         }
 
-                        // ── Login button ──────────────────────────────────────
+                        // ── Primary button (Sign In / Register) ───────────────
                         Button(
                             onClick = {
                                 if (isLoading) return@Button
-                                if (username.isBlank() || password.isBlank()) {
-                                    errorMessage = "Please enter your username and password"
+                                if (email.isBlank() || password.isBlank()) {
+                                    errorMessage = "Please enter your email and password"
                                     return@Button
                                 }
                                 loginJob?.cancel()
@@ -368,19 +338,32 @@ fun LoginScreen(
                                 keyboardController?.hide()
                                 loginJob = scope.launch {
                                     try {
-                                        val user = repository.login(
-                                            username.trim(), password.trim()
-                                        )
-                                        if (user != null) {
-                                            onLoginSuccess()
+                                        if (isRegistering) {
+                                            val result = repository.register(
+                                                email.trim(), password.trim()
+                                            )
+                                            if (result.isSuccess) {
+                                                onLoginSuccess()
+                                            } else {
+                                                errorMessage = result.exceptionOrNull()?.message
+                                                    ?: "Registration failed"
+                                                isLoading = false
+                                            }
                                         } else {
-                                            errorMessage = "Invalid credentials — try test / 1234"
-                                            isLoading = false
+                                            val success = repository.login(
+                                                email.trim(), password.trim()
+                                            )
+                                            if (success) {
+                                                onLoginSuccess()
+                                            } else {
+                                                errorMessage = "Invalid email or password"
+                                                isLoading = false
+                                            }
                                         }
                                     } catch (e: CancellationException) {
                                         isLoading = false; throw e
                                     } catch (e: Exception) {
-                                        errorMessage = "Login error: ${e.message}"
+                                        errorMessage = "Error: ${e.message}"
                                         isLoading = false
                                     }
                                 }
@@ -389,13 +372,9 @@ fun LoginScreen(
                                 .fillMaxWidth()
                                 .height(52.dp)
                                 .drawBehind {
-                                    // Glow under the button
                                     drawCircle(
                                         brush = Brush.radialGradient(
-                                            listOf(
-                                                BrandIndigo.copy(alpha = 0.45f),
-                                                Color.Transparent
-                                            ),
+                                            listOf(BrandIndigo.copy(alpha = 0.45f), Color.Transparent),
                                             radius = size.width * 0.6f
                                         ),
                                         radius = size.width * 0.6f,
@@ -435,7 +414,8 @@ fun LoginScreen(
                                             strokeWidth = 2.dp
                                         )
                                         Text(
-                                            "Authenticating…",
+                                            if (isRegistering) "Creating account…"
+                                            else "Authenticating…",
                                             color = Color.White,
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 15.sp
@@ -447,13 +427,15 @@ fun LoginScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            Icons.Filled.Login,
+                                            if (isRegistering) Icons.Filled.PersonAdd
+                                            else Icons.Filled.Login,
                                             contentDescription = null,
                                             tint = Color.White,
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Text(
-                                            "Sign In",
+                                            if (isRegistering) "Create Account"
+                                            else "Sign In",
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 15.sp,
@@ -464,60 +446,27 @@ fun LoginScreen(
                             }
                         }
 
-                        // ── Divider ───────────────────────────────────────────
+                        // ── Toggle Sign In / Register ─────────────────────────
                         Row(
                             modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            HorizontalDivider(
-                                modifier = Modifier.weight(1f),
-                                color = Color.White.copy(alpha = 0.08f)
+                            Text(
+                                text = if (isRegistering) "Already have an account? "
+                                else "Don't have an account? ",
+                                fontSize = 13.sp,
+                                color = OnSurfaceDim
                             )
                             Text(
-                                "  demo account  ",
-                                fontSize = 11.sp,
-                                color = OnSurfaceFaint,
-                                letterSpacing = 0.5.sp
-                            )
-                            HorizontalDivider(
-                                modifier = Modifier.weight(1f),
-                                color = Color.White.copy(alpha = 0.08f)
-                            )
-                        }
-
-                        // ── Demo pill ─────────────────────────────────────────
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.04f))
-                                .clickable {
-                                    username = "test"
-                                    password = "1234"
+                                text = if (isRegistering) "Sign In" else "Register",
+                                fontSize = 13.sp,
+                                color = BrandIndigo,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.clickable {
+                                    isRegistering = !isRegistering
                                     errorMessage = null
                                 }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Pulsing green dot
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(BrandEmerald)
-                            )
-                            Text(
-                                "Tap to autofill demo credentials",
-                                fontSize = 12.sp,
-                                color = OnSurfaceDim,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text(
-                                "test / 1234",
-                                fontSize = 12.sp,
-                                color = BrandEmerald,
-                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -526,7 +475,7 @@ fun LoginScreen(
 
             Spacer(Modifier.height(28.dp))
 
-            // Footer
+            // ── Footer ────────────────────────────────────────────────────────
             AnimatedVisibility(visible = visible, enter = fadeIn(tween(800, 300))) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(
@@ -540,7 +489,8 @@ fun LoginScreen(
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            "Secured · Powered by Room Database",
+                            // Updated from "Room Database" to "Firebase"
+                            "Secured · Powered by Firebase",
                             fontSize = 11.sp,
                             color = OnSurfaceFaint
                         )
@@ -580,10 +530,8 @@ private fun GlassTextField(
         label = "fieldBorder"
     )
     val bgColor by animateColorAsState(
-        targetValue = if (isFocused)
-            BrandIndigo.copy(alpha = 0.08f)
-        else
-            Color.White.copy(alpha = 0.04f),
+        targetValue = if (isFocused) BrandIndigo.copy(alpha = 0.08f)
+        else Color.White.copy(alpha = 0.04f),
         animationSpec = tween(250),
         label = "fieldBg"
     )

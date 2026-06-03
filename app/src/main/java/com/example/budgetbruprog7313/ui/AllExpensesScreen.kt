@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,7 +31,6 @@ fun AllExpensesScreen(
     navController: NavController,
     repository: BudgetRepository
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var allExpenses by remember { mutableStateOf<List<ExpenseEntry>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -42,15 +40,14 @@ fun AllExpensesScreen(
         currency = java.util.Currency.getInstance("ZAR")
     }
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
-    // Load all expenses
     LaunchedEffect(Unit) {
         scope.launch {
             try {
-                val startDate = Date(0) // Beginning of time
-                val endDate = Date() // Current date
-                val expenses = repository.getEntriesBetweenDates(startDate, endDate).first()
+                // 0L = beginning of time, currentTimeMillis = now
+                val expenses = repository
+                    .getEntriesBetweenDates(0L, System.currentTimeMillis())
+                    .first()
                 allExpenses = expenses.sortedByDescending { it.date }
                 totalSpent = expenses.sumOf { it.amount }
                 isLoading = false
@@ -75,9 +72,7 @@ fun AllExpensesScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DarkBackground
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
         }
     ) { paddingValues ->
@@ -87,7 +82,6 @@ fun AllExpensesScreen(
                 .background(DarkBackground)
                 .padding(paddingValues)
         ) {
-            // Summary Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -132,17 +126,11 @@ fun AllExpensesScreen(
             }
 
             if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
             } else if (allExpenses.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.Receipt,
@@ -174,7 +162,6 @@ fun AllExpensesScreen(
                         AllExpenseCard(
                             expense = expense,
                             dateFormat = dateFormat,
-                            timeFormat = timeFormat,
                             currencyFormat = currencyFormat
                         )
                     }
@@ -188,7 +175,6 @@ fun AllExpensesScreen(
 fun AllExpenseCard(
     expense: ExpenseEntry,
     dateFormat: SimpleDateFormat,
-    timeFormat: SimpleDateFormat,
     currencyFormat: java.text.NumberFormat
 ) {
     Card(
@@ -209,7 +195,8 @@ fun AllExpenseCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${dateFormat.format(expense.date)} at ${expense.startTime}",
+                    // expense.date is Long — convert to Date for formatting
+                    text = "${dateFormat.format(Date(expense.date))} at ${expense.startTime}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

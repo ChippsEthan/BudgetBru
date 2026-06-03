@@ -45,6 +45,8 @@ fun IOUScreen() {
     var showStats by remember { mutableStateOf(true) }
 
     val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    val fullDateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
+    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
     // Load IOUs from SharedPreferences
     LaunchedEffect(Unit) {
@@ -307,7 +309,9 @@ fun IOUScreen() {
             onDelete = {
                 ious = ious.filter { it.id != selectedIOU!!.id }
                 selectedIOU = null
-            }
+            },
+            fullDateFormat = fullDateFormat,
+            timeFormat = timeFormat
         )
     }
 }
@@ -441,7 +445,7 @@ fun ModernIOUCard(iou: IOUEntry, onSettle: () -> Unit, onDelete: () -> Unit, onC
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        dateFormat.format(iou.date),
+                        dateFormat.format(Date(iou.date)), // Convert Long to Date for display
                         fontSize = 11.sp,
                         color = Color.White.copy(alpha = 0.4f)
                     )
@@ -628,7 +632,7 @@ fun ModernAddIOUDialog(onAdd: (IOUEntry) -> Unit, onDismiss: () -> Unit) {
                                     amount = amt,
                                     type = type,
                                     reason = reason,
-                                    date = Date(),
+                                    date = System.currentTimeMillis(), // Changed from Date() to Long
                                     isSettled = false
                                 )
                                 onAdd(newIOU)
@@ -647,10 +651,7 @@ fun ModernAddIOUDialog(onAdd: (IOUEntry) -> Unit, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun ModernIOUDetailDialog(iou: IOUEntry, onDismiss: () -> Unit, onSettle: () -> Unit, onDelete: () -> Unit) {
-    val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
-
+fun ModernIOUDetailDialog(iou: IOUEntry, onDismiss: () -> Unit, onSettle: () -> Unit, onDelete: () -> Unit, fullDateFormat: SimpleDateFormat, timeFormat: SimpleDateFormat) {
     Dialog(
         onDismissRequest = onDismiss
     ) {
@@ -729,7 +730,7 @@ fun ModernIOUDetailDialog(iou: IOUEntry, onDismiss: () -> Unit, onSettle: () -> 
 
                 DetailItem(
                     label = "Date",
-                    value = dateFormat.format(iou.date),
+                    value = fullDateFormat.format(Date(iou.date)), // Convert Long to Date for display
                     color = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -801,6 +802,11 @@ private fun saveIOUs(sharedPrefs: SharedPreferences, ious: List<IOUEntry>) {
 
 private fun getSampleIOUs(): List<IOUEntry> {
     val calendar = Calendar.getInstance()
+    val now = System.currentTimeMillis()
+    val twoDaysAgo = now - (2L * 24 * 60 * 60 * 1000)
+    val fiveDaysAgo = now - (5L * 24 * 60 * 60 * 1000)
+    val tenDaysAgo = now - (10L * 24 * 60 * 60 * 1000)
+
     return listOf(
         IOUEntry(
             id = 1,
@@ -808,7 +814,7 @@ private fun getSampleIOUs(): List<IOUEntry> {
             amount = 150.0,
             type = "lent",
             reason = "Lunch & Coffee",
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -2) }.time,
+            date = twoDaysAgo, // Long timestamp
             isSettled = false
         ),
         IOUEntry(
@@ -817,7 +823,7 @@ private fun getSampleIOUs(): List<IOUEntry> {
             amount = 50.0,
             type = "borrowed",
             reason = "Movie tickets",
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -5) }.time,
+            date = fiveDaysAgo, // Long timestamp
             isSettled = false
         ),
         IOUEntry(
@@ -826,7 +832,7 @@ private fun getSampleIOUs(): List<IOUEntry> {
             amount = 200.0,
             type = "lent",
             reason = "Textbook",
-            date = calendar.apply { add(Calendar.DAY_OF_MONTH, -10) }.time,
+            date = tenDaysAgo, // Long timestamp
             isSettled = true
         )
     )
@@ -836,8 +842,8 @@ data class IOUEntry(
     val id: Long,
     val personName: String,
     val amount: Double,
-    val type: String,
+    val type: String, // "lent" or "borrowed"
     val reason: String,
-    val date: Date,
+    val date: Long, // Changed from Date to Long (timestamp)
     val isSettled: Boolean
 )
