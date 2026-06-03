@@ -167,7 +167,8 @@ fun TipCalculatorDialog(onDismiss: () -> Unit) {
 fun InnovativeFAB(
     onAddExpense: () -> Unit,
     onScanReceipt: () -> Unit,
-    onAddIncome: () -> Unit
+    onAddIncome: () -> Unit,
+    modifier: Modifier = Modifier  // Add this parameter
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -189,7 +190,7 @@ fun InnovativeFAB(
     )
 
     Box(
-        modifier = Modifier.padding(bottom = 16.dp),
+        modifier = modifier,  // Use the modifier parameter here
         contentAlignment = Alignment.BottomEnd
     ) {
         Column(
@@ -544,128 +545,140 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground, scrolledContainerColor = DarkBackground)
             )
         },
-        floatingActionButton = {
+        // REMOVED the default floatingActionButton - no more duplicate!
+        floatingActionButtonPosition = FabPosition.End
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DarkBackground)
+                    .verticalScroll(scrollState)
+                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
+                    Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CalendarToday, "Date", tint = BudgetBruPrimary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(currentDate, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Surface(shape = CircleShape, color = BudgetBruPrimary.copy(alpha = 0.2f), modifier = Modifier.size(36.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                val dayFormat = remember(currentLocale) { SimpleDateFormat("dd", currentLocale) }
+                                Text(dayFormat.format(Date(System.currentTimeMillis())), fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
+                            }
+                        }
+                    }
+                }
+
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), elevation = CardDefaults.cardElevation(8.dp)) {
+                    Box(modifier = Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(BudgetBruPrimary, BudgetBruSecondary, Color(0xFF6B21A5)))).padding(24.dp)) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            Text("Available Balance", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f), letterSpacing = 1.5.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text("R ${String.format("%,.2f", animatedBalance)}", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 48.sp)
+                            Spacer(Modifier.height(16.dp))
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                BalanceMiniStat("Total Spent", "R ${String.format("%,.2f", totalSpent)}", Color(0xFFFF6B6B))
+                                BalanceMiniStat("Remaining", "R ${String.format("%,.2f", availableBalance)}", Color(0xFF4ECDC4))
+                            }
+                        }
+                    }
+                }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    QuickStatCard("Monthly Spent", "R ${String.format("%,.2f", totalSpent)}", Icons.AutoMirrored.Filled.TrendingDown, BudgetBruAccent, if (availableBalance + totalSpent > 0) (totalSpent / (availableBalance + totalSpent) * 100).toInt() else 0, Modifier.weight(1f))
+                    QuickStatCard("Monthly Budget", "R ${String.format("%,.2f", availableBalance + totalSpent)}", Icons.Default.AccountBalanceWallet, BudgetBruSecondary, 100, Modifier.weight(1f))
+                }
+
+                Text("Quick Add Expense", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
+                    items(listOf(20.0, 50.0, 100.0, 200.0, 500.0)) { amount ->
+                        FilterChip(selected = selectedQuickAmount == amount, onClick = { selectedQuickAmount = amount }, label = { Text("R${amount.toInt()}") }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BudgetBruPrimary, selectedLabelColor = Color.White))
+                    }
+                }
+
+                if (categories.isNotEmpty()) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                        items(categories.take(8)) { category ->
+                            QuickAddChip(category.name, onClick = {
+                                viewModel.addQuickExpense(selectedQuickAmount, "Quick ${category.name}", category.id)
+                                scope.launch { snackbarHostState.showSnackbar("R${selectedQuickAmount.toInt()} added for ${category.name}") }
+                            })
+                        }
+                    }
+                }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Recent Activity", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    TextButton(onClick = onViewAllClick) { Text("View All", color = BudgetBruPrimary) }
+                }
+
+                if (isLoading) {
+                    repeat(3) { ShimmerCard(); Spacer(Modifier.height(8.dp)) }
+                } else if (recentActivity.isEmpty()) {
+                    Card(Modifier.fillMaxWidth().padding(vertical = 8.dp), colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Receipt, null, Modifier.size(64.dp), tint = BudgetBruPrimary.copy(alpha = 0.5f))
+                            Spacer(Modifier.height(16.dp))
+                            Text("No activity yet", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Tap the + button to add expenses or income", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                } else {
+                    recentActivity.forEachIndexed { index, transaction ->
+                        AnimatedExpenseItem(index) {
+                            TransactionCard(
+                                transaction = transaction,
+                                onDelete = {
+                                    when (transaction) {
+                                        is Transaction.Expense -> {
+                                            scope.launch {
+                                                repository.deleteExpenseById(transaction.id)
+                                                viewModel.refresh()
+                                                snackbarHostState.showSnackbar("Expense deleted")
+                                            }
+                                        }
+                                        is Transaction.Income -> {
+                                            viewModel.deleteIncome(transaction.id)
+                                            scope.launch { snackbarHostState.showSnackbar("Income deleted") }
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    if (transaction is Transaction.Expense) {
+                                        scope.launch {
+                                            val expenses = repository.getEntriesBetweenDates(0L, System.currentTimeMillis()).first()
+                                            selectedExpense = expenses.find { it.id == transaction.id }
+                                        }
+                                    }
+                                },
+                                currentLocale = currentLocale
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+            }
+
+            // Keep ONLY the InnovativeFAB - this is the expanding one
             InnovativeFAB(
                 onAddExpense = { showAddExpenseDialog = true },
                 onScanReceipt = { showScanReceiptSnackbar = true },
-                onAddIncome = { showAddIncomeDialog = true }
+                onAddIncome = { showAddIncomeDialog = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
             )
-        },
-        floatingActionButtonPosition = FabPosition.End
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier.fillMaxSize().background(DarkBackground).verticalScroll(scrollState).padding(paddingValues).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = DarkCard)) {
-                Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CalendarToday, "Date", tint = BudgetBruPrimary, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(currentDate, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Surface(shape = CircleShape, color = BudgetBruPrimary.copy(alpha = 0.2f), modifier = Modifier.size(36.dp)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            val dayFormat = remember(currentLocale) { SimpleDateFormat("dd", currentLocale) }
-                            Text(dayFormat.format(Date(System.currentTimeMillis())), fontWeight = FontWeight.Bold, color = BudgetBruPrimary)
-                        }
-                    }
-                }
-            }
-
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), elevation = CardDefaults.cardElevation(8.dp)) {
-                Box(modifier = Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(BudgetBruPrimary, BudgetBruSecondary, Color(0xFF6B21A5)))).padding(24.dp)) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                        Text("Available Balance", style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f), letterSpacing = 1.5.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text("R ${String.format("%,.2f", animatedBalance)}", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 48.sp)
-                        Spacer(Modifier.height(16.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            BalanceMiniStat("Total Spent", "R ${String.format("%,.2f", totalSpent)}", Color(0xFFFF6B6B))
-                            BalanceMiniStat("Remaining", "R ${String.format("%,.2f", availableBalance)}", Color(0xFF4ECDC4))
-                        }
-                    }
-                }
-            }
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickStatCard("Monthly Spent", "R ${String.format("%,.2f", totalSpent)}", Icons.AutoMirrored.Filled.TrendingDown, BudgetBruAccent, if (availableBalance + totalSpent > 0) (totalSpent / (availableBalance + totalSpent) * 100).toInt() else 0, Modifier.weight(1f))
-                QuickStatCard("Monthly Budget", "R ${String.format("%,.2f", availableBalance + totalSpent)}", Icons.Default.AccountBalanceWallet, BudgetBruSecondary, 100, Modifier.weight(1f))
-            }
-
-            Text("Quick Add Expense", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                items(listOf(20.0, 50.0, 100.0, 200.0, 500.0)) { amount ->
-                    FilterChip(selected = selectedQuickAmount == amount, onClick = { selectedQuickAmount = amount }, label = { Text("R${amount.toInt()}") }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = BudgetBruPrimary, selectedLabelColor = Color.White))
-                }
-            }
-
-            if (categories.isNotEmpty()) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)) {
-                    items(categories.take(8)) { category ->
-                        QuickAddChip(category.name, onClick = {
-                            viewModel.addQuickExpense(selectedQuickAmount, "Quick ${category.name}", category.id)
-                            scope.launch { snackbarHostState.showSnackbar("R${selectedQuickAmount.toInt()} added for ${category.name}") }
-                        })
-                    }
-                }
-            }
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Recent Activity", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = onViewAllClick) { Text("View All", color = BudgetBruPrimary) }
-            }
-
-            if (isLoading) {
-                repeat(3) { ShimmerCard(); Spacer(Modifier.height(8.dp)) }
-            } else if (recentActivity.isEmpty()) {
-                Card(Modifier.fillMaxWidth().padding(vertical = 8.dp), colors = CardDefaults.cardColors(containerColor = DarkCard), shape = RoundedCornerShape(16.dp)) {
-                    Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Receipt, null, Modifier.size(64.dp), tint = BudgetBruPrimary.copy(alpha = 0.5f))
-                        Spacer(Modifier.height(16.dp))
-                        Text("No activity yet", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Tap the + button to add expenses or income", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            } else {
-                recentActivity.forEachIndexed { index, transaction ->
-                    AnimatedExpenseItem(index) {
-                        TransactionCard(
-                            transaction = transaction,
-                            onDelete = {
-                                when (transaction) {
-                                    is Transaction.Expense -> {
-                                        scope.launch {
-                                            repository.deleteExpenseById(transaction.id)
-                                            viewModel.refresh()
-                                            snackbarHostState.showSnackbar("Expense deleted")
-                                        }
-                                    }
-                                    is Transaction.Income -> {
-                                        viewModel.deleteIncome(transaction.id)
-                                        scope.launch { snackbarHostState.showSnackbar("Income deleted") }
-                                    }
-                                }
-                            },
-                            onClick = {
-                                if (transaction is Transaction.Expense) {
-                                    scope.launch {
-                                        val expenses = repository.getEntriesBetweenDates(0L, System.currentTimeMillis()).first()
-                                        selectedExpense = expenses.find { it.id == transaction.id }
-                                    }
-                                }
-                            },
-                            currentLocale = currentLocale
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
         }
     }
 
+    // Rest of the dialogs remain the same...
     if (showDeleteConfirmation && expenseToDelete != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false; expenseToDelete = null },
@@ -868,7 +881,6 @@ fun HomeScreen(repository: BudgetRepository, onViewAllClick: () -> Unit = {}) {
         TipCalculatorDialog(onDismiss = { showTipDialog = false })
     }
 }
-
 // ==================== UI COMPONENTS ====================
 
 @Composable

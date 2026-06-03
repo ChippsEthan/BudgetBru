@@ -32,8 +32,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.budgetbruprog7313.data.repository.BudgetRepository
 import com.example.budgetbruprog7313.ui.navigation.InnovativeBottomBar
 import com.example.budgetbruprog7313.ui.theme.BudgetBruTheme
-// Make sure this import points to your Screen class
-import com.example.budgetbruprog7313.ui.Screen  // Import from ui package, not navigation
 
 class MainActivity : ComponentActivity() {
 
@@ -81,41 +79,8 @@ fun MainAppContent(
         containerColor = Color(0xFF07070F),
         bottomBar = {
             InnovativeBottomBar(navController = navController)
-        },
-        floatingActionButton = {
-            // FAB only visible on Home screen
-            AnimatedVisibility(
-                visible = currentRoute == Screen.Home.route,
-                enter = fadeIn() + slideInVertically { it },
-                exit = fadeOut() + slideOutVertically { it }
-            ) {
-                FloatingActionButton(
-                    onClick = { showAddExpenseBottomSheet = true },
-                    shape = CircleShape,
-                    containerColor = Color.Transparent,
-                    contentColor = Color.White,
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    Color(0xFF6366F1),
-                                    Color(0xFF10B981)
-                                )
-                            )
-                        )
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = "Add Expense",
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End
+        }
+        // FAB COMPLETELY REMOVED FROM HERE - no floatingActionButton section!
     ) { innerPadding ->
 
         // Add Expense Bottom Sheet
