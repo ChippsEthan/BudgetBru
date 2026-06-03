@@ -1,4 +1,4 @@
-# BudgetBru - Smart Budgeting for Students https://www.youtube.com/watch?v=nrToxu69IMI
+# BudgetBru - Smart Budgeting for Students [https://www.youtube.com/watch?v=nrToxu69IMI](https://youtu.be/lfmSZhAhx8g)
 
 <div align="center">
 
